@@ -23,7 +23,12 @@ export class KeycloakService {
     });
   }
 
-  async provisionTenantRealm(tenantId: string, tenantName: string) {
+  async provisionTenantRealm(
+    tenantId: string,
+    tenantName: string,
+    adminEmail?: string,
+    adminPassword?: string,
+  ) {
     try {
       await this.authenticate();
       
@@ -37,6 +42,52 @@ export class KeycloakService {
       });
 
       this.logger.log(`Provisioned new realm: ${realmName}`);
+
+      // Create a custom 'admin' role in the new realm for Gateway RBAC
+      await this.kcAdminClient.roles.create({
+        realm: realmName,
+        name: 'admin',
+        description: 'Tenant Administrator',
+      });
+
+      if (adminEmail && adminPassword) {
+        // Create the default admin user
+        const user = await this.kcAdminClient.users.create({
+          realm: realmName,
+          username: adminEmail,
+          email: adminEmail,
+          enabled: true,
+          emailVerified: true,
+          credentials: [
+            {
+              type: 'password',
+              value: adminPassword,
+              temporary: false,
+            },
+          ],
+        });
+
+        // Assign the 'admin' role to the newly created user
+        const adminRole = await this.kcAdminClient.roles.findOneByName({
+          realm: realmName,
+          name: 'admin',
+        });
+
+        if (adminRole && adminRole.id && adminRole.name) {
+          await this.kcAdminClient.users.addRealmRoleMappings({
+            realm: realmName,
+            id: user.id,
+            roles: [
+              {
+                id: adminRole.id,
+                name: adminRole.name,
+              },
+            ],
+          });
+          this.logger.log(`Provisioned default admin user (${adminEmail}) with 'admin' role in ${realmName}`);
+        }
+      }
+
       return { success: true, realm: realmName };
     } catch (error: any) {
       this.logger.error(`Failed to provision realm for tenant ${tenantId}`, error.stack);

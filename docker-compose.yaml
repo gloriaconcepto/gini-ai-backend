@@ -18,7 +18,7 @@ services:
     container_name: gini_keycloak_dev
     environment:
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_URL: jdbc:postgresql://postgres:5432/ginidb
       KC_DB_USERNAME: pgadmin
       KC_DB_PASSWORD: your_secure_password
       KEYCLOAK_ADMIN: admin
@@ -46,6 +46,11 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
+      - DATABASE_URL=postgresql://pgadmin:your_secure_password@postgres:5432/ginidb
+      - KEYCLOAK_URL=http://keycloak:8080
+      - REDIS_HOST=redis
+    env_file:
+      - .env
     depends_on:
       - postgres
       - keycloak
