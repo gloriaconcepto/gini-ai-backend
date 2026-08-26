@@ -17,7 +17,12 @@ export class AuthController {
   @ApiResponse({ status: 500, description: 'Failed to provision tenant realm.' })
   async createTenant(@Body() body: CreateTenantDto) {
     const tenantId = randomUUID();
-    const result = await this.keycloakService.provisionTenantRealm(tenantId, body.tenantName);
+    const result = await this.keycloakService.provisionTenantRealm(
+      tenantId,
+      body.tenantName,
+      body.adminEmail,
+      body.adminPassword,
+    );
     return { ...result, tenantId };
   }
 }
