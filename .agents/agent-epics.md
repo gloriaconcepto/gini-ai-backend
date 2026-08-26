@@ -11,6 +11,9 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Retroactively add Swagger decorators (`@ApiOperation`, `@ApiResponse`, etc.) to existing controllers.
 - [x] Retroactively add `@ApiProperty()` and validation decorators to existing DTOs.
 
+## Epic 1.6: Tenant Default Admin Provisioning
+- [x] Add `adminEmail` and `adminPassword` to `CreateTenantDto`.
+- [x] Implement user and custom `admin` role provisioning in `KeycloakService`.
 
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create `@RequireDualControl()` decorator.
