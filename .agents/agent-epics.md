@@ -12,6 +12,10 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Retroactively add `@ApiProperty()` and validation decorators to existing DTOs.
 
 
+## Epic 1.7: Azure Key Vault Integration
+- [ ] Update Terraform to securely store infrastructure secrets in Azure Key Vault.
+- [ ] Configure Azure Container Apps to map Key Vault secrets to environment variables, OR install `@azure/keyvault-secrets` to fetch them at runtime in NestJS.
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create `@RequireDualControl()` decorator.
 - [ ] Implement `MakerCheckerGuard` to enforce Maker != Checker logic on state-changing routes.

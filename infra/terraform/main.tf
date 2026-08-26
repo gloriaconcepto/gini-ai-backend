@@ -271,9 +271,31 @@ resource "azurerm_container_app" "gateway" {
     }
   }
 
+  identity {
+    type = "SystemAssigned"
+  }
+
   secret {
     name  = "acr-password"
     value = azurerm_container_registry.acr.admin_password
+  }
+
+  secret {
+    name                = "database-url"
+    key_vault_secret_id = azurerm_key_vault_secret.database_url.id
+    identity            = "SystemAssigned"
+  }
+
+  secret {
+    name                = "keycloak-admin"
+    key_vault_secret_id = azurerm_key_vault_secret.keycloak_admin.id
+    identity            = "SystemAssigned"
+  }
+
+  secret {
+    name                = "keycloak-admin-password"
+    key_vault_secret_id = azurerm_key_vault_secret.keycloak_admin_password.id
+    identity            = "SystemAssigned"
   }
 
   registry {
@@ -294,8 +316,16 @@ resource "azurerm_container_app" "gateway" {
       memory = "2Gi"
 
       env {
-        name  = "DATABASE_URL"
-        value = "postgresql://${var.db_admin_username}:${var.db_admin_password}@${azurerm_postgresql_flexible_server.postgres.fqdn}:5432/ginidb"
+        name        = "DATABASE_URL"
+        secret_name = "database-url"
+      }
+      env {
+        name        = "KEYCLOAK_ADMIN"
+        secret_name = "keycloak-admin"
+      }
+      env {
+        name        = "KEYCLOAK_ADMIN_PASSWORD"
+        secret_name = "keycloak-admin-password"
       }
       env {
         name  = "REDIS_HOST"
@@ -336,8 +366,42 @@ resource "azurerm_key_vault" "kv" {
   tenant_id                   = data.azurerm_client_config.current.tenant_id
   soft_delete_retention_days  = 7
   purge_protection_enabled    = false
+  rbac_authorization_enabled  = true
 
   sku_name = "standard"
+}
+
+resource "azurerm_role_assignment" "terraform_kv_admin" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Administrator"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
+resource "azurerm_role_assignment" "gateway_kv_secrets_user" {
+  scope                = azurerm_key_vault.kv.id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_container_app.gateway.identity[0].principal_id
+}
+
+resource "azurerm_key_vault_secret" "database_url" {
+  name         = "database-url"
+  value        = "postgresql://${var.db_admin_username}:${var.db_admin_password}@${azurerm_postgresql_flexible_server.postgres.fqdn}:5432/ginidb"
+  key_vault_id = azurerm_key_vault.kv.id
+  depends_on   = [azurerm_role_assignment.terraform_kv_admin]
+}
+
+resource "azurerm_key_vault_secret" "keycloak_admin" {
+  name         = "keycloak-admin"
+  value        = "admin"
+  key_vault_id = azurerm_key_vault.kv.id
+  depends_on   = [azurerm_role_assignment.terraform_kv_admin]
+}
+
+resource "azurerm_key_vault_secret" "keycloak_admin_password" {
+  name         = "keycloak-admin-password"
+  value        = "admin"
+  key_vault_id = azurerm_key_vault.kv.id
+  depends_on   = [azurerm_role_assignment.terraform_kv_admin]
 }
 
 resource "azurerm_network_interface" "gpu_nic" {
