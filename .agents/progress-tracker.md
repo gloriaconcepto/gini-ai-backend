@@ -13,14 +13,8 @@ Update this file whenever the current phase, active feature, or implementation s
 - Provided local `docker-compose.yml` (with `ankane/pgvector:v0.5.1`, Redis 7, Keycloak 24).
 - Reserved `snet-vllm-gpu` subnet for future GPU deployment.
 
-## In Progress
-- Developing `@RequireDualControl()` decorator and `MakerCheckerGuard` in NestJS Gateway.
-- Configuring Keycloak realm provisioning via `@keycloak/keycloak-admin-client`.
-
-## Next Up
-- **Phase 1 Contract Gate:** Enforce automated OpenAPI / Swagger specification export (`openapi.json`) to unblock parallel React/Vite UI development.
-- Build read-only Audit Command Centre schema and masking interceptors for System Auditor.
-- Set up BullMQ queues and worker scaffolding for Doc AI ingestion.
+## Active Tasks & Epics
+- Please refer to [agent-epics.md](./agent-epics.md) for the detailed, sequential list of implementation tasks and active epics.
 
 ## Architecture Decisions
 - **LLM Deferral:** GPU / vLLM deployment paused; infrastructure prepped via `snet-vllm-gpu`.
