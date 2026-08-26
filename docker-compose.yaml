@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: gini_postgres_dev
+    environment:
+      POSTGRES_USER: pgadmin
+      POSTGRES_PASSWORD: your_secure_password
+      POSTGRES_DB: ginidb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    container_name: gini_keycloak_dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: pgadmin
+      KC_DB_PASSWORD: your_secure_password
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: start-dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    container_name: gini_redis_dev
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--maxmemory", "800mb", "--maxmemory-policy", "volatile-lru"]
+
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/Dockerfile
+    container_name: gini_gateway_dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+    depends_on:
+      - postgres
+      - keycloak
+      - redis
+
+volumes:
+  pgdata:
