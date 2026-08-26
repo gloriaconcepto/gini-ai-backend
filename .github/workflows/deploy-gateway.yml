@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  CONTAINER_APP_NAME: 'ca-gini-ai-gateway-dev'
-  IMAGE_NAME: 'gini-ai-gateway'
+  CONTAINER_APP_NAME: 'ca-gateway-dev'
+  IMAGE_NAME: 'backend-gateway'
   DOCKER_FILE_PATH: './apps/gateway/Dockerfile'
   BUILD_CONTEXT: '.'
 
