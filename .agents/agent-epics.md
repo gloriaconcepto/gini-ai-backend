@@ -7,6 +7,11 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Implement `KeycloakService` for dynamic tenant realm provisioning.
 - [x] Create Global Auth Guard to extract `tenant_id` from JWT.
 
+## Epic 1.5: Retroactive OpenAPI / Swagger Compliance
+- [x] Retroactively add Swagger decorators (`@ApiOperation`, `@ApiResponse`, etc.) to existing controllers.
+- [x] Retroactively add `@ApiProperty()` and validation decorators to existing DTOs.
+
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create `@RequireDualControl()` decorator.
 - [ ] Implement `MakerCheckerGuard` to enforce Maker != Checker logic on state-changing routes.
