@@ -16,6 +16,7 @@ Read the following files in order before implementing or making any architectura
 2. `architecture-context.md` — System structure, the Azure Container Apps topology, the Docker Compose local setup, and Keycloak tenant provisioning.
 3. `code-standards.md` — NestJS implementation rules, structured logging, Drizzle ORM standards, and Auditor data masking requirements.
 4. `ai-workflow-rules.md` — Development workflow, infrastructure-first rules, and how to handle the temporary absence of LLM models.
-5. `progress-tracker.md` — Current phase, completed work, and immediate next steps.
+5. `agent-epics.md` — The structured sequence of implementation tasks and epics.
+6. `progress-tracker.md` — Current phase, completed work, and high-level goals.
 
-Update `progress-tracker.md` after each meaningful implementation change.
+Update `progress-tracker.md` and check off tasks in `agent-epics.md` after each meaningful implementation change.
