@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - development
     paths:
       - 'apps/gateway/**'
       - '.github/workflows/deploy-gateway.yml'
