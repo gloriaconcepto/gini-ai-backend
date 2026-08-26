@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  CONTAINER_APP_NAME: 'ca-gateway-dev'
-  IMAGE_NAME: 'backend-gateway'
+  CONTAINER_APP_NAME: 'ca-gini-ai-gateway-dev'
+  IMAGE_NAME: 'gini-ai-gateway'
   DOCKER_FILE_PATH: './apps/gateway/Dockerfile'
   BUILD_CONTEXT: '.'
 
@@ -50,8 +50,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Log in to Azure
         uses: azure/login@v1
