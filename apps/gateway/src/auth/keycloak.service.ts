@@ -28,6 +28,7 @@ export class KeycloakService {
     tenantName: string,
     adminEmail?: string,
     adminPassword?: string,
+    attributes?: Record<string, string>,
   ) {
     try {
       await this.authenticate();
@@ -39,6 +40,7 @@ export class KeycloakService {
         realm: realmName,
         displayName: tenantName,
         enabled: true,
+        attributes: attributes || {},
       });
 
       this.logger.log(`Provisioned new realm: ${realmName}`);
@@ -171,5 +173,33 @@ export class KeycloakService {
       config: dto.config,
     });
     return { success: true, alias: dto.alias };
+  }
+
+  // --- Master Admin Methods ---
+
+  async listAllTenants() {
+    await this.authenticate();
+    const realms = await this.kcAdminClient.realms.find();
+    return realms.filter(r => r.realm?.startsWith('tenant-'));
+  }
+
+  async getTenantDetails(tenantId: string) {
+    await this.authenticate();
+    const realmName = `tenant-${tenantId}`;
+    return this.kcAdminClient.realms.findOne({ realm: realmName });
+  }
+
+  async updateTenant(tenantId: string, updates: any) {
+    await this.authenticate();
+    const realmName = `tenant-${tenantId}`;
+    await this.kcAdminClient.realms.update({ realm: realmName }, updates);
+    return { success: true };
+  }
+
+  async deleteTenant(tenantId: string) {
+    await this.authenticate();
+    const realmName = `tenant-${tenantId}`;
+    await this.kcAdminClient.realms.del({ realm: realmName });
+    return { success: true };
   }
 }
