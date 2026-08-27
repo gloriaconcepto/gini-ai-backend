@@ -6,6 +6,11 @@ import { GatewayModule } from './gateway.module';
 async function bootstrap() {
   const app = await NestFactory.create(GatewayModule);
 
+  // Enable CORS
+  app.enableCors({
+    exposedHeaders: ['X-Tenant-ID'],
+  });
+
   // Enable global validation pipe for class-validator
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
