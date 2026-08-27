@@ -94,4 +94,82 @@ export class KeycloakService {
       throw error;
     }
   }
+
+  async getUsers(tenantId: string) {
+    await this.authenticate();
+    return this.kcAdminClient.users.find({ realm: `tenant-${tenantId}` });
+  }
+
+  async createUser(tenantId: string, dto: any) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    const user = await this.kcAdminClient.users.create({
+      realm,
+      username: dto.username,
+      email: dto.email,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      enabled: true,
+      emailVerified: true,
+      credentials: [
+        {
+          type: 'password',
+          value: dto.password,
+          temporary: false,
+        },
+      ],
+    });
+    return user;
+  }
+
+  async createRole(tenantId: string, dto: any) {
+    await this.authenticate();
+    await this.kcAdminClient.roles.create({
+      realm: `tenant-${tenantId}`,
+      name: dto.name,
+      description: dto.description,
+    });
+    return { success: true, role: dto.name };
+  }
+
+  async assignRoleToUser(tenantId: string, userId: string, roleName: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    const role = await this.kcAdminClient.roles.findOneByName({ realm, name: roleName });
+    if (!role || !role.id || !role.name) {
+      throw new Error(`Role ${roleName} not found`);
+    }
+    await this.kcAdminClient.users.addRealmRoleMappings({
+      realm,
+      id: userId,
+      roles: [{ id: role.id, name: role.name }],
+    });
+    return { success: true };
+  }
+
+  async createClient(tenantId: string, dto: any) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    const client = await this.kcAdminClient.clients.create({
+      realm,
+      clientId: dto.clientId,
+      publicClient: dto.publicClient,
+      directAccessGrantsEnabled: dto.directAccessGrantsEnabled,
+      redirectUris: dto.redirectUris,
+      webOrigins: dto.webOrigins,
+    });
+    return client;
+  }
+
+  async createIdentityProvider(tenantId: string, dto: any) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    await this.kcAdminClient.identityProviders.create({
+      realm,
+      alias: dto.alias,
+      providerId: dto.providerId,
+      config: dto.config,
+    });
+    return { success: true, alias: dto.alias };
+  }
 }
