@@ -12,6 +12,11 @@ Update this file whenever the current phase, active feature, or implementation s
 - Defined Terraform configuration for ACA, PostgreSQL, Redis, Keycloak, and Gateway.
 - Provided local `docker-compose.yml` (with `ankane/pgvector:v0.5.1`, Redis 7, Keycloak 24).
 - Reserved `snet-vllm-gpu` subnet for future GPU deployment.
+- Initialized NestJS Gateway with Keycloak Service for dynamic tenant realm provisioning.
+- Retroactively applied Swagger/OpenAPI decorators across the Gateway DTOs and Controllers.
+- Configured automated default admin provisioning when creating new tenant realms.
+- Wired up Azure Key Vault for remote environments and standardized `.env` setup.
+- Built comprehensive IAM endpoints (users, roles, SSO/IDPs) for Tenant Admins with strict role guards.
 
 ## Active Tasks & Epics
 - Please refer to [agent-epics.md](./agent-epics.md) for the detailed, sequential list of implementation tasks and active epics.
