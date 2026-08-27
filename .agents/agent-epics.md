@@ -25,6 +25,12 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Implement endpoints to create custom roles and assign them to users.
 - [x] Implement endpoints to create clients and integrate 3rd-party SSO (Identity Providers).
 
+## Epic 1.9: Master Admin Capabilities & Corporate Metadata
+- [x] Extend `CreateTenantDto` with corporate metadata (Industry, Tax ID, etc.).
+- [x] Update `KeycloakService` to store metadata in Realm attributes and add master methods.
+- [x] Create `MasterAdminGuard` for Keycloak's Master Realm users.
+- [x] Create `SystemController` for Master Admins to manage all tenants.
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create `@RequireDualControl()` decorator.
 - [ ] Implement `MakerCheckerGuard` to enforce Maker != Checker logic on state-changing routes.

@@ -27,11 +27,20 @@ export class AuthController {
   @ApiResponse({ status: 500, description: 'Failed to provision tenant realm.' })
   async createTenant(@Body() body: CreateTenantDto, @Res({ passthrough: true }) res: Response) {
     const tenantId = randomUUID();
+    const attributes: Record<string, string> = {};
+    if (body.industry) attributes.industry = body.industry;
+    if (body.domainName) attributes.domainName = body.domainName;
+    if (body.subscriptionTier) attributes.subscriptionTier = body.subscriptionTier;
+    if (body.taxId) attributes.taxId = body.taxId;
+    if (body.billingAddress) attributes.billingAddress = body.billingAddress;
+    if (body.contactPhone) attributes.contactPhone = body.contactPhone;
+
     const result = await this.keycloakService.provisionTenantRealm(
       tenantId,
       body.tenantName,
       body.adminEmail,
       body.adminPassword,
+      attributes,
     );
     res.header('X-Tenant-ID', tenantId);
     return result;
