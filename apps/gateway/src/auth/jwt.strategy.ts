@@ -23,12 +23,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             return done(new Error('No issuer found in token'));
           }
 
-          // Fetch the JWKS from the token's issuer (works across dynamically provisioned tenant realms)
+          let jwksUri = `${issuer}/protocol/openid-connect/certs`;
+          
+          // TODO: Remove or disable in production
+          // Docker networking workaround: If the token was generated on the host machine (localhost),
+          // the Gateway inside Docker needs to route it to the 'keycloak' service instead.
+          if (process.env.NODE_ENV === 'development' && process.env.KEYCLOAK_URL && process.env.KEYCLOAK_URL.includes('keycloak')) {
+            jwksUri = jwksUri.replace('localhost:8080', 'keycloak:8080');
+          }
+
+          // Fetch the JWKS from the token's issuer
           const client = new JwksClient({
             cache: true,
             rateLimit: true,
             jwksRequestsPerMinute: 5,
-            jwksUri: `${issuer}/protocol/openid-connect/certs`,
+            jwksUri,
           });
 
           const kid = decoded.header.kid;
