@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule } from '@nestjs/config';
-import { KeycloakService } from './keycloak.service';
-import { IamController } from './iam.controller';
-import { SystemController } from './system.controller';
-import { JwtStrategy } from './jwt.strategy';
+import { KeycloakService } from './services/keycloak.service';
+import { IamController } from './controllers/iam.controller';
+import { SystemController } from './controllers/system.controller';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [

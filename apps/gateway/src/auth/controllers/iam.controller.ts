@@ -8,11 +8,11 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { KeycloakService } from './keycloak.service';
-import { JwtAuthGuard } from './jwt-auth.guard';
-import { RolesGuard } from './roles.guard';
-import { Roles } from './roles.decorator';
-import { AuthenticatedUser } from './jwt.strategy';
+import { KeycloakService } from '../services/keycloak.service';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { RolesGuard } from '../guards/roles.guard';
+import { Roles } from '../decorators/roles.decorator';
+import { AuthenticatedUser } from '../strategies/jwt.strategy';
 import type { Request as ExpressRequest } from 'express';
 
 type AuthRequest = ExpressRequest & { user: AuthenticatedUser };
@@ -22,7 +22,7 @@ import {
   AssignRoleDto,
   CreateIamClientDto,
   CreateIdpDto,
-} from './dto/iam.dtos';
+} from '../dto/iam.dtos';
 
 @ApiTags('Tenant IAM')
 @ApiBearerAuth()

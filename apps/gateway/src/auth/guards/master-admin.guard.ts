@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { Request } from 'express';
-import { AuthenticatedUser } from './jwt.strategy';
+import { AuthenticatedUser } from '../strategies/jwt.strategy';
 
 @Injectable()
 export class MasterAdminGuard implements CanActivate {

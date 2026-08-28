@@ -17,10 +17,10 @@ import {
   ApiBearerAuth,
   ApiResponse,
 } from '@nestjs/swagger';
-import { KeycloakService } from './keycloak.service';
-import { JwtAuthGuard } from './jwt-auth.guard';
-import { MasterAdminGuard } from './master-admin.guard';
-import { CreateTenantDto } from './dto/create-tenant.dto';
+import { KeycloakService } from '../services/keycloak.service';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { MasterAdminGuard } from '../guards/master-admin.guard';
+import { CreateTenantDto } from '../dto/create-tenant.dto';
 
 import type RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
 

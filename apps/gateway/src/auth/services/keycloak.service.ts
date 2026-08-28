@@ -7,7 +7,7 @@ import {
   CreateIamRoleDto,
   CreateIamClientDto,
   CreateIdpDto,
-} from './dto/iam.dtos';
+} from '../dto/iam.dtos';
 
 @Injectable()
 export class KeycloakService {
