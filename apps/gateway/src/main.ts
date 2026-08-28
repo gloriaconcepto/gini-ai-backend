@@ -21,11 +21,13 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(process.env.port ?? 3000);
 }
-bootstrap();
-
+bootstrap().catch((err) => {
+  console.error('Failed to start Gateway application', err);
+  process.exit(1);
+});

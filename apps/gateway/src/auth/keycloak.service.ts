@@ -1,6 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import KcAdminClient from '@keycloak/keycloak-admin-client';
+import RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
+import {
+  CreateIamUserDto,
+  CreateIamRoleDto,
+  CreateIamClientDto,
+  CreateIdpDto,
+} from './dto/iam.dtos';
 
 @Injectable()
 export class KeycloakService {
@@ -9,7 +16,10 @@ export class KeycloakService {
 
   constructor(private configService: ConfigService) {
     this.kcAdminClient = new KcAdminClient({
-      baseUrl: this.configService.get<string>('KEYCLOAK_URL', 'http://localhost:8080'),
+      baseUrl: this.configService.get<string>(
+        'KEYCLOAK_URL',
+        'http://localhost:8080',
+      ),
       realmName: 'master',
     });
   }
@@ -17,7 +27,10 @@ export class KeycloakService {
   private async authenticate() {
     await this.kcAdminClient.auth({
       username: this.configService.get<string>('KEYCLOAK_ADMIN', 'admin'),
-      password: this.configService.get<string>('KEYCLOAK_ADMIN_PASSWORD', 'admin'),
+      password: this.configService.get<string>(
+        'KEYCLOAK_ADMIN_PASSWORD',
+        'admin',
+      ),
       grantType: 'password',
       clientId: 'admin-cli',
     });
@@ -32,9 +45,9 @@ export class KeycloakService {
   ) {
     try {
       await this.authenticate();
-      
+
       const realmName = `tenant-${tenantId}`;
-      
+
       // Create the new realm
       await this.kcAdminClient.realms.create({
         realm: realmName,
@@ -86,13 +99,22 @@ export class KeycloakService {
               },
             ],
           });
-          this.logger.log(`Provisioned default admin user (${adminEmail}) with 'admin' role in ${realmName}`);
+          this.logger.log(
+            `Provisioned default admin user (${adminEmail}) with 'admin' role in ${realmName}`,
+          );
         }
       }
 
       return { success: true, realm: realmName };
-    } catch (error: any) {
-      this.logger.error(`Failed to provision realm for tenant ${tenantId}`, error.stack);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(
+          `Failed to provision realm for tenant ${tenantId}`,
+          error.stack,
+        );
+      } else {
+        this.logger.error(`Failed to provision realm for tenant ${tenantId}`);
+      }
       throw error;
     }
   }
@@ -102,7 +124,7 @@ export class KeycloakService {
     return this.kcAdminClient.users.find({ realm: `tenant-${tenantId}` });
   }
 
-  async createUser(tenantId: string, dto: any) {
+  async createUser(tenantId: string, dto: CreateIamUserDto) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
     const user = await this.kcAdminClient.users.create({
@@ -124,7 +146,7 @@ export class KeycloakService {
     return user;
   }
 
-  async createRole(tenantId: string, dto: any) {
+  async createRole(tenantId: string, dto: CreateIamRoleDto) {
     await this.authenticate();
     await this.kcAdminClient.roles.create({
       realm: `tenant-${tenantId}`,
@@ -137,7 +159,10 @@ export class KeycloakService {
   async assignRoleToUser(tenantId: string, userId: string, roleName: string) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
-    const role = await this.kcAdminClient.roles.findOneByName({ realm, name: roleName });
+    const role = await this.kcAdminClient.roles.findOneByName({
+      realm,
+      name: roleName,
+    });
     if (!role || !role.id || !role.name) {
       throw new Error(`Role ${roleName} not found`);
     }
@@ -149,7 +174,7 @@ export class KeycloakService {
     return { success: true };
   }
 
-  async createClient(tenantId: string, dto: any) {
+  async createClient(tenantId: string, dto: CreateIamClientDto) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
     const client = await this.kcAdminClient.clients.create({
@@ -163,7 +188,7 @@ export class KeycloakService {
     return client;
   }
 
-  async createIdentityProvider(tenantId: string, dto: any) {
+  async createIdentityProvider(tenantId: string, dto: CreateIdpDto) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
     await this.kcAdminClient.identityProviders.create({
@@ -180,7 +205,7 @@ export class KeycloakService {
   async listAllTenants() {
     await this.authenticate();
     const realms = await this.kcAdminClient.realms.find();
-    return realms.filter(r => r.realm?.startsWith('tenant-'));
+    return realms.filter((r) => r.realm?.startsWith('tenant-'));
   }
 
   async getTenantDetails(tenantId: string) {
@@ -189,7 +214,7 @@ export class KeycloakService {
     return this.kcAdminClient.realms.findOne({ realm: realmName });
   }
 
-  async updateTenant(tenantId: string, updates: any) {
+  async updateTenant(tenantId: string, updates: RealmRepresentation) {
     await this.authenticate();
     const realmName = `tenant-${tenantId}`;
     await this.kcAdminClient.realms.update({ realm: realmName }, updates);

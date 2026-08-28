@@ -1,8 +1,18 @@
-import { Controller, Get, Param, Patch, Delete, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Delete,
+  Body,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { KeycloakService } from './keycloak.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { MasterAdminGuard } from './master-admin.guard';
+
+import RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
 
 @ApiTags('System Admin (Master)')
 @ApiBearerAuth()
@@ -25,7 +35,10 @@ export class SystemController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update metadata for a specific tenant realm' })
-  async updateTenant(@Param('id') id: string, @Body() updates: any) {
+  async updateTenant(
+    @Param('id') id: string,
+    @Body() updates: RealmRepresentation,
+  ) {
     return this.keycloakService.updateTenant(id, updates);
   }
 

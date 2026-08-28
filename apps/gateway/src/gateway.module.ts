@@ -7,10 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    AuthModule,
-  ],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), AuthModule],
   controllers: [GatewayController],
   providers: [
     GatewayService,
