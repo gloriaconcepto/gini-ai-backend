@@ -21,6 +21,7 @@ import { KeycloakService } from '../services/keycloak.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { MasterAdminGuard } from '../guards/master-admin.guard';
 import { CreateTenantDto } from '../dto/create-tenant.dto';
+import { TenantStatusDto } from '../dto/iam.dtos';
 
 import type RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
 
@@ -91,6 +92,15 @@ export class SystemController {
     @Body() updates: RealmRepresentation,
   ) {
     return this.keycloakService.updateTenant(id, updates);
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Enable or disable a tenant realm' })
+  async setTenantStatus(
+    @Param('id') id: string,
+    @Body() body: TenantStatusDto,
+  ) {
+    return this.keycloakService.setTenantStatus(id, body.enabled);
   }
 
   @Delete(':id')

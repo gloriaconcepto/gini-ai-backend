@@ -126,3 +126,75 @@ export class CreateIdpDto {
   @IsObject()
   config: Record<string, string>;
 }
+
+export class UpdateIamUserDto {
+  @ApiPropertyOptional({ example: 'john@example.com', description: 'Updated email address' })
+  @IsEmail()
+  @IsOptional()
+  email?: string;
+
+  @ApiPropertyOptional({ example: 'John', description: 'Updated first name' })
+  @IsString()
+  @IsOptional()
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: 'Doe', description: 'Updated last name' })
+  @IsString()
+  @IsOptional()
+  lastName?: string;
+
+  @ApiPropertyOptional({ example: true, description: 'Whether the user account is enabled' })
+  @IsBoolean()
+  @IsOptional()
+  enabled?: boolean;
+}
+
+export class ResetPasswordDto {
+  @ApiProperty({ example: 'NewSecureP@ssw0rd', description: 'New password for the user' })
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+
+  @ApiPropertyOptional({ example: false, description: 'Require user to change password on next login' })
+  @IsBoolean()
+  @IsOptional()
+  temporary?: boolean;
+}
+
+export class UpdateIdpDto {
+  @ApiPropertyOptional({ example: 'Google Workspace SSO', description: 'Display name for IDP' })
+  @IsString()
+  @IsOptional()
+  displayName?: string;
+
+  @ApiPropertyOptional({ example: true, description: 'Enable or disable IDP' })
+  @IsBoolean()
+  @IsOptional()
+  enabled?: boolean;
+
+  @ApiPropertyOptional({
+    example: { clientId: 'xxx', clientSecret: 'yyy' },
+    description: 'Updated IDP key-value configuration',
+  })
+  @IsObject()
+  @IsOptional()
+  config?: Record<string, string>;
+}
+
+export class TenantStatusDto {
+  @ApiProperty({ example: true, description: 'Set tenant realm status (enabled or disabled)' })
+  @IsBoolean()
+  enabled: boolean;
+}
+
+export class CreateApiKeyDto {
+  @ApiProperty({ example: 'Backend Ingestion Service', description: 'Name/label for the API Key' })
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @ApiPropertyOptional({ example: 30, description: 'Expiration period in days (optional)' })
+  @IsOptional()
+  expiresInDays?: number;
+}
+

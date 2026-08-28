@@ -25,6 +25,8 @@ export interface AuthenticatedUser {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  private static jwksClients = new Map<string, JwksClient>();
+
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -49,7 +51,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
           let jwksUri = `${issuer}/protocol/openid-connect/certs`;
 
-          // TODO: Remove or disable in production
           // Docker networking workaround: If the token was generated on the host machine (localhost),
           // the Gateway inside Docker needs to route it to the 'keycloak' service instead.
           if (
@@ -60,13 +61,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             jwksUri = jwksUri.replace('localhost:8080', 'keycloak:8080');
           }
 
-          // Fetch the JWKS from the token's issuer
-          const client = new JwksClient({
-            cache: true,
-            rateLimit: true,
-            jwksRequestsPerMinute: 5,
-            jwksUri,
-          });
+          // Fetch or reuse cached JWKS client for this issuer URI
+          let client = JwtStrategy.jwksClients.get(jwksUri);
+          if (!client) {
+            client = new JwksClient({
+              cache: true,
+              rateLimit: true,
+              jwksRequestsPerMinute: 10,
+              jwksUri,
+            });
+            JwtStrategy.jwksClients.set(jwksUri, client);
+          }
 
           const kid = decoded.header.kid;
           if (!kid) {
@@ -88,10 +93,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(request: Request, payload: KeycloakJwtPayload): AuthenticatedUser {
+    let tenantId = payload.tenant_id;
+    // Fallback: Extract tenantId from issuer url if not explicitly in custom claims
+    if (!tenantId && payload.iss) {
+      const match = payload.iss.match(/\/realms\/tenant-([a-zA-Z0-9-]+)$/);
+      if (match) {
+        tenantId = match[1];
+      }
+    }
+
     return {
       userId: payload.sub,
       username: payload.preferred_username,
-      tenantId: payload.tenant_id,
+      tenantId,
       roles: payload.realm_access?.roles || [],
       issuer: payload.iss,
     };

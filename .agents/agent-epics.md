@@ -31,6 +31,16 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Create `MasterAdminGuard` for Keycloak's Master Realm users.
 - [x] Create `SystemController` for Master Admins to manage all tenants.
 
+## Epic 1.10: Enterprise Authentication Hardening & IAM Administration Lifecycle (Priority 1)
+- [x] Multi-Tenant JWT Strategy Hardening (JWKS client caching per issuer & dynamic tenantId extraction from issuer URL).
+- [x] Complete User Lifecycle Management (GET user details, PATCH user profile/status, DELETE user, PUT admin password reset).
+- [x] User Role Mapping Endpoints (GET user roles, DELETE role mapping from user).
+- [x] Role Lifecycle & Default Governance Roles (GET roles list, DELETE custom role, auto-provision `maker`, `checker`, `auditor`, `user`, `admin` on realm creation).
+- [x] Client & Identity Provider Management (GET clients list, GET client secret, DELETE client, GET/PATCH/DELETE Identity Providers).
+- [x] Default Frontend Client Provisioning (auto-configure SPA client with web origins and token mappers during realm creation).
+- [x] Tenant API Key Lifecycle & Dual Auth Guard (Issue, list, revoke API keys; implement `ApiKeyAuthGuard` / Unified Auth Guard).
+- [x] Master Admin Tenant Controls & Exception Mapping (Enable/disable realm toggle, map Keycloak errors to NestJS HTTP exceptions).
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create `@RequireDualControl()` decorator.
 - [ ] Implement `MakerCheckerGuard` to enforce Maker != Checker logic on state-changing routes.

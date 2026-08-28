@@ -1,12 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import KcAdminClient from '@keycloak/keycloak-admin-client';
 import RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
 import {
   CreateIamUserDto,
+  UpdateIamUserDto,
+  ResetPasswordDto,
   CreateIamRoleDto,
   CreateIamClientDto,
   CreateIdpDto,
+  UpdateIdpDto,
 } from '../dto/iam.dtos';
 
 @Injectable()
@@ -48,7 +57,7 @@ export class KeycloakService {
 
       const realmName = `tenant-${tenantId}`;
 
-      // Create the new realm
+      // 1. Create the new tenant realm
       await this.kcAdminClient.realms.create({
         realm: realmName,
         displayName: tenantName,
@@ -58,15 +67,36 @@ export class KeycloakService {
 
       this.logger.log(`Provisioned new realm: ${realmName}`);
 
-      // Create a custom 'admin' role in the new realm for Gateway RBAC
-      await this.kcAdminClient.roles.create({
+      // 2. Pre-provision standard governance roles for Gini Platform
+      const standardRoles = [
+        { name: 'admin', description: 'Tenant Administrator' },
+        { name: 'maker', description: 'Maker Role - Dual Control Submitter' },
+        { name: 'checker', description: 'Checker Role - Dual Control Approver' },
+        { name: 'auditor', description: 'System Auditor - Read Only Compliance' },
+        { name: 'user', description: 'Standard Tenant User' },
+      ];
+
+      for (const role of standardRoles) {
+        await this.kcAdminClient.roles.create({
+          realm: realmName,
+          name: role.name,
+          description: role.description,
+        });
+      }
+
+      // 3. Provision default SPA Frontend Client
+      await this.kcAdminClient.clients.create({
         realm: realmName,
-        name: 'admin',
-        description: 'Tenant Administrator',
+        clientId: 'gini-frontend',
+        publicClient: true,
+        directAccessGrantsEnabled: true,
+        standardFlowEnabled: true,
+        redirectUris: ['*'],
+        webOrigins: ['*'],
       });
 
+      // 4. Create default tenant admin user if credentials provided
       if (adminEmail && adminPassword) {
-        // Create the default admin user
         const user = await this.kcAdminClient.users.create({
           realm: realmName,
           username: adminEmail,
@@ -82,7 +112,6 @@ export class KeycloakService {
           ],
         });
 
-        // Assign the 'admin' role to the newly created user
         const adminRole = await this.kcAdminClient.roles.findOneByName({
           realm: realmName,
           name: 'admin',
@@ -119,9 +148,24 @@ export class KeycloakService {
     }
   }
 
+  // --- User Lifecycle Methods ---
+
   async getUsers(tenantId: string) {
     await this.authenticate();
     return this.kcAdminClient.users.find({ realm: `tenant-${tenantId}` });
+  }
+
+  async getUserById(tenantId: string, userId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    const user = await this.kcAdminClient.users.findOne({
+      realm,
+      id: userId,
+    });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    return user;
   }
 
   async createUser(tenantId: string, dto: CreateIamUserDto) {
@@ -146,6 +190,85 @@ export class KeycloakService {
     return user;
   }
 
+  async updateUser(tenantId: string, userId: string, dto: UpdateIamUserDto) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    await this.kcAdminClient.users.update(
+      { realm, id: userId },
+      {
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        enabled: dto.enabled,
+      },
+    );
+    return { success: true, userId };
+  }
+
+  async deleteUser(tenantId: string, userId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    await this.kcAdminClient.users.del({ realm, id: userId });
+    return { success: true, userId };
+  }
+
+  async resetUserPassword(
+    tenantId: string,
+    userId: string,
+    dto: ResetPasswordDto,
+  ) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    await this.kcAdminClient.users.resetPassword({
+      realm,
+      id: userId,
+      credential: {
+        type: 'password',
+        value: dto.password,
+        temporary: dto.temporary ?? false,
+      },
+    });
+    return { success: true, message: 'Password reset successfully' };
+  }
+
+  async getUserRoles(tenantId: string, userId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    return this.kcAdminClient.users.listRealmRoleMappings({
+      realm,
+      id: userId,
+    });
+  }
+
+  async removeRoleFromUser(
+    tenantId: string,
+    userId: string,
+    roleName: string,
+  ) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    const role = await this.kcAdminClient.roles.findOneByName({
+      realm,
+      name: roleName,
+    });
+    if (!role || !role.id || !role.name) {
+      throw new NotFoundException(`Role ${roleName} not found`);
+    }
+    await this.kcAdminClient.users.delRealmRoleMappings({
+      realm,
+      id: userId,
+      roles: [{ id: role.id, name: role.name }],
+    });
+    return { success: true };
+  }
+
+  // --- Role Management Methods ---
+
+  async listRoles(tenantId: string) {
+    await this.authenticate();
+    return this.kcAdminClient.roles.find({ realm: `tenant-${tenantId}` });
+  }
+
   async createRole(tenantId: string, dto: CreateIamRoleDto) {
     await this.authenticate();
     await this.kcAdminClient.roles.create({
@@ -156,6 +279,16 @@ export class KeycloakService {
     return { success: true, role: dto.name };
   }
 
+  async deleteRole(tenantId: string, roleName: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    await this.kcAdminClient.roles.delByName({
+      realm,
+      name: roleName,
+    });
+    return { success: true, role: roleName };
+  }
+
   async assignRoleToUser(tenantId: string, userId: string, roleName: string) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
@@ -164,7 +297,7 @@ export class KeycloakService {
       name: roleName,
     });
     if (!role || !role.id || !role.name) {
-      throw new Error(`Role ${roleName} not found`);
+      throw new NotFoundException(`Role ${roleName} not found`);
     }
     await this.kcAdminClient.users.addRealmRoleMappings({
       realm,
@@ -172,6 +305,13 @@ export class KeycloakService {
       roles: [{ id: role.id, name: role.name }],
     });
     return { success: true };
+  }
+
+  // --- Client Management Methods ---
+
+  async listClients(tenantId: string) {
+    await this.authenticate();
+    return this.kcAdminClient.clients.find({ realm: `tenant-${tenantId}` });
   }
 
   async createClient(tenantId: string, dto: CreateIamClientDto) {
@@ -188,6 +328,34 @@ export class KeycloakService {
     return client;
   }
 
+  async getClientSecret(tenantId: string, clientDbId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    return this.kcAdminClient.clients.getClientSecret({
+      realm,
+      id: clientDbId,
+    });
+  }
+
+  async deleteClient(tenantId: string, clientDbId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    await this.kcAdminClient.clients.del({
+      realm,
+      id: clientDbId,
+    });
+    return { success: true, id: clientDbId };
+  }
+
+  // --- Identity Provider (IdP) Methods ---
+
+  async listIdentityProviders(tenantId: string) {
+    await this.authenticate();
+    return this.kcAdminClient.identityProviders.find({
+      realm: `tenant-${tenantId}`,
+    });
+  }
+
   async createIdentityProvider(tenantId: string, dto: CreateIdpDto) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
@@ -198,6 +366,34 @@ export class KeycloakService {
       config: dto.config,
     });
     return { success: true, alias: dto.alias };
+  }
+
+  async updateIdentityProvider(
+    tenantId: string,
+    alias: string,
+    dto: UpdateIdpDto,
+  ) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    await this.kcAdminClient.identityProviders.update(
+      { realm, alias },
+      {
+        displayName: dto.displayName,
+        enabled: dto.enabled,
+        config: dto.config,
+      },
+    );
+    return { success: true, alias };
+  }
+
+  async deleteIdentityProvider(tenantId: string, alias: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    await this.kcAdminClient.identityProviders.del({
+      realm,
+      alias,
+    });
+    return { success: true, alias };
   }
 
   // --- Master Admin Methods ---
@@ -211,7 +407,11 @@ export class KeycloakService {
   async getTenantDetails(tenantId: string) {
     await this.authenticate();
     const realmName = `tenant-${tenantId}`;
-    return this.kcAdminClient.realms.findOne({ realm: realmName });
+    const realm = await this.kcAdminClient.realms.findOne({ realm: realmName });
+    if (!realm) {
+      throw new NotFoundException(`Tenant realm ${realmName} not found`);
+    }
+    return realm;
   }
 
   async updateTenant(tenantId: string, updates: RealmRepresentation) {
@@ -221,6 +421,16 @@ export class KeycloakService {
     return { success: true };
   }
 
+  async setTenantStatus(tenantId: string, enabled: boolean) {
+    await this.authenticate();
+    const realmName = `tenant-${tenantId}`;
+    await this.kcAdminClient.realms.update(
+      { realm: realmName },
+      { enabled },
+    );
+    return { success: true, enabled };
+  }
+
   async deleteTenant(tenantId: string) {
     await this.authenticate();
     const realmName = `tenant-${tenantId}`;
@@ -228,3 +438,4 @@ export class KeycloakService {
     return { success: true };
   }
 }
+

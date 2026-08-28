@@ -17,6 +17,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - Configured automated default admin provisioning when creating new tenant realms.
 - Wired up Azure Key Vault for remote environments and standardized `.env` setup.
 - Built comprehensive IAM endpoints (users, roles, SSO/IDPs) for Tenant Admins with strict role guards.
+- Completed Epic 1.10: Full User, Role, Client & IdP lifecycle, JWKS client caching, dynamic tenantId extraction, standard governance roles auto-provisioning (`maker`, `checker`, `auditor`, `user`, `admin`), Tenant API Key management & ApiKeyGuard.
 
 ## Active Tasks & Epics
 - Please refer to [agent-epics.md](./agent-epics.md) for the detailed, sequential list of implementation tasks and active epics.
