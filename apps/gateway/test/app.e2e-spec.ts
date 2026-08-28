@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { GatewayModule } from './../src/gateway.module';
 
 describe('GatewayController (e2e)', () => {
@@ -16,6 +16,7 @@ describe('GatewayController (e2e)', () => {
   });
 
   it('/ (GET)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     return request(app.getHttpServer())
       .get('/')
       .expect(200)

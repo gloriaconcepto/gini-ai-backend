@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsEmail, IsNotEmpty, IsOptional, IsBoolean, IsArray, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsArray,
+  IsObject,
+} from 'class-validator';
 
 export class CreateIamUserDto {
   @ApiProperty({ example: 'johndoe', description: 'Username for the new user' })
@@ -7,7 +15,10 @@ export class CreateIamUserDto {
   @IsNotEmpty()
   username: string;
 
-  @ApiProperty({ example: 'john@example.com', description: 'Email for the new user' })
+  @ApiProperty({
+    example: 'john@example.com',
+    description: 'Email for the new user',
+  })
   @IsEmail()
   email: string;
 
@@ -21,7 +32,10 @@ export class CreateIamUserDto {
   @IsOptional()
   lastName?: string;
 
-  @ApiProperty({ example: 'SecureP@ssw0rd', description: 'Initial password for the user' })
+  @ApiProperty({
+    example: 'SecureP@ssw0rd',
+    description: 'Initial password for the user',
+  })
   @IsString()
   @IsNotEmpty()
   password: string;
@@ -33,14 +47,20 @@ export class CreateIamRoleDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiPropertyOptional({ example: 'Read-only access to audit logs', description: 'Role description' })
+  @ApiPropertyOptional({
+    example: 'Read-only access to audit logs',
+    description: 'Role description',
+  })
   @IsString()
   @IsOptional()
   description?: string;
 }
 
 export class AssignRoleDto {
-  @ApiProperty({ example: 'auditor', description: 'Name of the role to assign' })
+  @ApiProperty({
+    example: 'auditor',
+    description: 'Name of the role to assign',
+  })
   @IsString()
   @IsNotEmpty()
   roleName: string;
@@ -56,17 +76,26 @@ export class CreateIamClientDto {
   @IsBoolean()
   publicClient: boolean;
 
-  @ApiProperty({ example: true, description: 'Enable direct access grants (password flow)' })
+  @ApiProperty({
+    example: true,
+    description: 'Enable direct access grants (password flow)',
+  })
   @IsBoolean()
   directAccessGrantsEnabled: boolean;
 
-  @ApiPropertyOptional({ example: ['http://localhost:3000/*'], description: 'Allowed redirect URIs' })
+  @ApiPropertyOptional({
+    example: ['http://localhost:3000/*'],
+    description: 'Allowed redirect URIs',
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   redirectUris?: string[];
 
-  @ApiPropertyOptional({ example: ['http://localhost:3000'], description: 'Allowed Web Origins (CORS)' })
+  @ApiPropertyOptional({
+    example: ['http://localhost:3000'],
+    description: 'Allowed Web Origins (CORS)',
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
@@ -74,12 +103,18 @@ export class CreateIamClientDto {
 }
 
 export class CreateIdpDto {
-  @ApiProperty({ example: 'google-sso', description: 'Alias for the Identity Provider' })
+  @ApiProperty({
+    example: 'google-sso',
+    description: 'Alias for the Identity Provider',
+  })
   @IsString()
   @IsNotEmpty()
   alias: string;
 
-  @ApiProperty({ example: 'google', description: 'Provider ID (e.g. google, oidc, saml)' })
+  @ApiProperty({
+    example: 'google',
+    description: 'Provider ID (e.g. google, oidc, saml)',
+  })
   @IsString()
   @IsNotEmpty()
   providerId: string;

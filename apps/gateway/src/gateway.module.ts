@@ -4,13 +4,10 @@ import { ConfigModule } from '@nestjs/config';
 import { GatewayController } from './gateway.controller';
 import { GatewayService } from './gateway.service';
 import { AuthModule } from './auth/auth.module';
-import { JwtAuthGuard } from './auth/jwt-auth.guard';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    AuthModule,
-  ],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), AuthModule],
   controllers: [GatewayController],
   providers: [
     GatewayService,

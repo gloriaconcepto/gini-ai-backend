@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule } from '@nestjs/config';
-import { KeycloakService } from './keycloak.service';
-import { AuthController } from './auth.controller';
-import { IamController } from './iam.controller';
-import { SystemController } from './system.controller';
-import { JwtStrategy } from './jwt.strategy';
+import { KeycloakService } from './services/keycloak.service';
+import { IamController } from './controllers/iam.controller';
+import { SystemController } from './controllers/system.controller';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -13,7 +12,7 @@ import { JwtStrategy } from './jwt.strategy';
     ConfigModule, // Assuming ConfigModule is globally imported in GatewayModule, but good to be explicit
   ],
   providers: [KeycloakService, JwtStrategy],
-  controllers: [AuthController, IamController, SystemController],
+  controllers: [IamController, SystemController],
   exports: [KeycloakService],
 })
 export class AuthModule {}
