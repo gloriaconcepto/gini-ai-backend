@@ -1,18 +1,28 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   Patch,
   Delete,
   Body,
   UseGuards,
+  Res,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { randomUUID } from 'crypto';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { KeycloakService } from './keycloak.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { MasterAdminGuard } from './master-admin.guard';
+import { CreateTenantDto } from './dto/create-tenant.dto';
 
-import RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
+import type RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
 
 @ApiTags('System Admin (Master)')
 @ApiBearerAuth()
@@ -20,6 +30,47 @@ import RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmR
 @Controller('system/tenants')
 export class SystemController {
   constructor(private readonly keycloakService: KeycloakService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Provision a new tenant realm and API keys' })
+  @ApiResponse({
+    status: 201,
+    description: 'The tenant realm has been successfully provisioned.',
+    headers: {
+      'X-Tenant-ID': {
+        description: 'The unique ID of the newly created tenant',
+        schema: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Failed to provision tenant realm.',
+  })
+  async createTenant(
+    @Body() body: CreateTenantDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tenantId = randomUUID();
+    const attributes: Record<string, string> = {};
+    if (body.industry) attributes.industry = body.industry;
+    if (body.domainName) attributes.domainName = body.domainName;
+    if (body.subscriptionTier)
+      attributes.subscriptionTier = body.subscriptionTier;
+    if (body.taxId) attributes.taxId = body.taxId;
+    if (body.billingAddress) attributes.billingAddress = body.billingAddress;
+    if (body.contactPhone) attributes.contactPhone = body.contactPhone;
+
+    const result = await this.keycloakService.provisionTenantRealm(
+      tenantId,
+      body.tenantName,
+      body.adminEmail,
+      body.adminPassword,
+      attributes,
+    );
+    res.header('X-Tenant-ID', tenantId);
+    return result;
+  }
 
   @Get()
   @ApiOperation({ summary: 'List all provisioned tenant realms' })
