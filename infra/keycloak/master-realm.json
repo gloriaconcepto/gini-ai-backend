@@ -30,6 +30,19 @@
   ],
   "users": [
     {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@gini.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    },
+    {
       "username": "service-account-gini-gateway-service",
       "enabled": true,
       "serviceAccountClientId": "gini-gateway-service",

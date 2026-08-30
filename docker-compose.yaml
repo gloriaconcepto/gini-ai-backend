@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: ankane/pgvector:v0.5.1
@@ -31,6 +29,15 @@ services:
     depends_on:
       - postgres
 
+  keycloak-init:
+    image: quay.io/keycloak/keycloak:24.0.0
+    container_name: gini_keycloak_init
+    depends_on:
+      - keycloak
+    volumes:
+      - ./scripts/init-keycloak.sh:/init.sh:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+
   redis:
     image: redis:7-alpine
     container_name: gini_redis_dev
@@ -56,6 +63,7 @@ services:
     depends_on:
       - postgres
       - keycloak
+      - keycloak-init
       - redis
 
 volumes:
