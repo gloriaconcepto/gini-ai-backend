@@ -1,0 +1,39 @@
+{
+  "realm": "master",
+  "enabled": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Administrator role"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "gini-gateway-service",
+      "name": "Gini AI Gateway Service Account",
+      "description": "Confidential client for Gateway administrative access and multi-tenant management",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3",
+      "bearerOnly": false,
+      "consentRequired": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-gini-gateway-service",
+      "enabled": true,
+      "serviceAccountClientId": "gini-gateway-service",
+      "realmRoles": ["admin"]
+    }
+  ]
+}

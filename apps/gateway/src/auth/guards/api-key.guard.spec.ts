@@ -17,7 +17,10 @@ describe('ApiKeyGuard', () => {
   });
 
   it('should allow valid x-api-key header and populate request.user', async () => {
-    const created = await service.generateApiKey('tenant-100', 'Agent Integration');
+    const created = await service.generateApiKey(
+      'tenant-100',
+      'Agent Integration',
+    );
 
     const mockRequest: any = {
       headers: {
@@ -49,7 +52,9 @@ describe('ApiKeyGuard', () => {
       }),
     } as ExecutionContext;
 
-    await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(mockContext)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 
   it('should throw UnauthorizedException when API key is invalid', async () => {
@@ -65,6 +70,8 @@ describe('ApiKeyGuard', () => {
       }),
     } as ExecutionContext;
 
-    await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
+    await expect(guard.canActivate(mockContext)).rejects.toThrow(
+      UnauthorizedException,
+    );
   });
 });

@@ -68,7 +68,9 @@ export class ApiKeyService {
     };
   }
 
-  async listApiKeys(tenantId: string): Promise<Omit<ApiKeyRecord, 'hashedKey'>[]> {
+  async listApiKeys(
+    tenantId: string,
+  ): Promise<Omit<ApiKeyRecord, 'hashedKey'>[]> {
     const list: Omit<ApiKeyRecord, 'hashedKey'>[] = [];
     for (const record of this.apiKeys.values()) {
       if (record.tenantId === tenantId) {
@@ -79,7 +81,10 @@ export class ApiKeyService {
     return list;
   }
 
-  async revokeApiKey(tenantId: string, keyId: string): Promise<{ success: boolean; id: string }> {
+  async revokeApiKey(
+    tenantId: string,
+    keyId: string,
+  ): Promise<{ success: boolean; id: string }> {
     const record = this.apiKeys.get(keyId);
     if (!record || record.tenantId !== tenantId) {
       throw new NotFoundException(`API key with ID ${keyId} not found`);

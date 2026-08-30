@@ -287,14 +287,8 @@ resource "azurerm_container_app" "gateway" {
   }
 
   secret {
-    name                = "keycloak-admin"
-    key_vault_secret_id = azurerm_key_vault_secret.keycloak_admin.id
-    identity            = "SystemAssigned"
-  }
-
-  secret {
-    name                = "keycloak-admin-password"
-    key_vault_secret_id = azurerm_key_vault_secret.keycloak_admin_password.id
+    name                = "keycloak-admin-client-secret"
+    key_vault_secret_id = azurerm_key_vault_secret.keycloak_admin_client_secret.id
     identity            = "SystemAssigned"
   }
 
@@ -320,12 +314,12 @@ resource "azurerm_container_app" "gateway" {
         secret_name = "database-url"
       }
       env {
-        name        = "KEYCLOAK_ADMIN"
-        secret_name = "keycloak-admin"
+        name  = "KEYCLOAK_ADMIN_CLIENT_ID"
+        value = var.keycloak_admin_client_id
       }
       env {
-        name        = "KEYCLOAK_ADMIN_PASSWORD"
-        secret_name = "keycloak-admin-password"
+        name        = "KEYCLOAK_ADMIN_CLIENT_SECRET"
+        secret_name = "keycloak-admin-client-secret"
       }
       env {
         name  = "REDIS_HOST"
@@ -390,16 +384,9 @@ resource "azurerm_key_vault_secret" "database_url" {
   depends_on   = [azurerm_role_assignment.terraform_kv_admin]
 }
 
-resource "azurerm_key_vault_secret" "keycloak_admin" {
-  name         = "keycloak-admin"
-  value        = "admin"
-  key_vault_id = azurerm_key_vault.kv.id
-  depends_on   = [azurerm_role_assignment.terraform_kv_admin]
-}
-
-resource "azurerm_key_vault_secret" "keycloak_admin_password" {
-  name         = "keycloak-admin-password"
-  value        = "admin"
+resource "azurerm_key_vault_secret" "keycloak_admin_client_secret" {
+  name         = "keycloak-admin-client-secret"
+  value        = var.keycloak_admin_client_secret
   key_vault_id = azurerm_key_vault.kv.id
   depends_on   = [azurerm_role_assignment.terraform_kv_admin]
 }

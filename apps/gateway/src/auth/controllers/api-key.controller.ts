@@ -8,7 +8,12 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { ApiKeyService } from '../services/api-key.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
@@ -31,7 +36,8 @@ export class ApiKeyController {
   @ApiOperation({ summary: 'Generate a new API key for the tenant' })
   @ApiResponse({
     status: 201,
-    description: 'The API key has been created. The raw apiKey is only displayed once upon creation.',
+    description:
+      'The API key has been created. The raw apiKey is only displayed once upon creation.',
   })
   async createApiKey(
     @Request() req: AuthRequest,
@@ -54,10 +60,7 @@ export class ApiKeyController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Revoke an existing API key' })
-  async revokeApiKey(
-    @Request() req: AuthRequest,
-    @Param('id') id: string,
-  ) {
+  async revokeApiKey(@Request() req: AuthRequest, @Param('id') id: string) {
     const tenantId = req.user.tenantId!;
     return this.apiKeyService.revokeApiKey(tenantId, id);
   }

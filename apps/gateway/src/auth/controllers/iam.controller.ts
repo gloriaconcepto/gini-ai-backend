@@ -10,7 +10,12 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { KeycloakService } from '../services/keycloak.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
@@ -48,7 +53,9 @@ export class IamController {
   }
 
   @Get('users/:userId')
-  @ApiOperation({ summary: 'Get details of a specific user in the tenant realm' })
+  @ApiOperation({
+    summary: 'Get details of a specific user in the tenant realm',
+  })
   async getUser(@Request() req: AuthRequest, @Param('userId') userId: string) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.getUserById(tenantId, userId);
@@ -62,7 +69,9 @@ export class IamController {
   }
 
   @Patch('users/:userId')
-  @ApiOperation({ summary: 'Update profile and status of a user in the tenant realm' })
+  @ApiOperation({
+    summary: 'Update profile and status of a user in the tenant realm',
+  })
   async updateUser(
     @Request() req: AuthRequest,
     @Param('userId') userId: string,
@@ -175,21 +184,19 @@ export class IamController {
   }
 
   @Get('clients/:id/secret')
-  @ApiOperation({ summary: 'Retrieve credentials/client-secret for a confidential client' })
-  async getClientSecret(
-    @Request() req: AuthRequest,
-    @Param('id') id: string,
-  ) {
+  @ApiOperation({
+    summary: 'Retrieve credentials/client-secret for a confidential client',
+  })
+  async getClientSecret(@Request() req: AuthRequest, @Param('id') id: string) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.getClientSecret(tenantId, id);
   }
 
   @Delete('clients/:id')
-  @ApiOperation({ summary: 'Delete an OAuth/OIDC client from the tenant realm' })
-  async deleteClient(
-    @Request() req: AuthRequest,
-    @Param('id') id: string,
-  ) {
+  @ApiOperation({
+    summary: 'Delete an OAuth/OIDC client from the tenant realm',
+  })
+  async deleteClient(@Request() req: AuthRequest, @Param('id') id: string) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.deleteClient(tenantId, id);
   }
@@ -197,7 +204,9 @@ export class IamController {
   // --- Identity Providers (IdP) ---
 
   @Get('idp')
-  @ApiOperation({ summary: 'List all 3rd-party Identity Providers configured for the tenant' })
+  @ApiOperation({
+    summary: 'List all 3rd-party Identity Providers configured for the tenant',
+  })
   async listIdps(@Request() req: AuthRequest) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.listIdentityProviders(tenantId);
@@ -211,7 +220,9 @@ export class IamController {
   }
 
   @Patch('idp/:alias')
-  @ApiOperation({ summary: 'Update a 3rd-party Identity Provider configuration' })
+  @ApiOperation({
+    summary: 'Update a 3rd-party Identity Provider configuration',
+  })
   async updateIdp(
     @Request() req: AuthRequest,
     @Param('alias') alias: string,
@@ -222,13 +233,11 @@ export class IamController {
   }
 
   @Delete('idp/:alias')
-  @ApiOperation({ summary: 'Delete a 3rd-party Identity Provider from the tenant realm' })
-  async deleteIdp(
-    @Request() req: AuthRequest,
-    @Param('alias') alias: string,
-  ) {
+  @ApiOperation({
+    summary: 'Delete a 3rd-party Identity Provider from the tenant realm',
+  })
+  async deleteIdp(@Request() req: AuthRequest, @Param('alias') alias: string) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.deleteIdentityProvider(tenantId, alias);
   }
 }
-

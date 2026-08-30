@@ -23,7 +23,9 @@ services:
       KC_DB_PASSWORD: your_secure_password
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-    command: start-dev
+    volumes:
+      - ./infra/keycloak/master-realm.json:/opt/keycloak/data/import/master-realm.json:ro
+    command: start-dev --import-realm
     ports:
       - "8080:8080"
     depends_on:

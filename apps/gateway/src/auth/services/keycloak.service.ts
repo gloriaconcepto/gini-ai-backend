@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-  BadRequestException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import KcAdminClient from '@keycloak/keycloak-admin-client';
 import RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
@@ -34,15 +28,26 @@ export class KeycloakService {
   }
 
   private async authenticate() {
-    await this.kcAdminClient.auth({
-      username: this.configService.get<string>('KEYCLOAK_ADMIN', 'admin'),
-      password: this.configService.get<string>(
-        'KEYCLOAK_ADMIN_PASSWORD',
-        'admin',
-      ),
-      grantType: 'password',
-      clientId: 'admin-cli',
-    });
+    const clientId = this.configService.getOrThrow<string>(
+      'KEYCLOAK_ADMIN_CLIENT_ID',
+    );
+    const clientSecret = this.configService.getOrThrow<string>(
+      'KEYCLOAK_ADMIN_CLIENT_SECRET',
+    );
+
+    try {
+      await this.kcAdminClient.auth({
+        grantType: 'client_credentials',
+        clientId,
+        clientSecret,
+      });
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Failed to authenticate Keycloak admin client via client_credentials (${errorMsg})`,
+      );
+      throw error;
+    }
   }
 
   async provisionTenantRealm(
@@ -71,8 +76,14 @@ export class KeycloakService {
       const standardRoles = [
         { name: 'admin', description: 'Tenant Administrator' },
         { name: 'maker', description: 'Maker Role - Dual Control Submitter' },
-        { name: 'checker', description: 'Checker Role - Dual Control Approver' },
-        { name: 'auditor', description: 'System Auditor - Read Only Compliance' },
+        {
+          name: 'checker',
+          description: 'Checker Role - Dual Control Approver',
+        },
+        {
+          name: 'auditor',
+          description: 'System Auditor - Read Only Compliance',
+        },
         { name: 'user', description: 'Standard Tenant User' },
       ];
 
@@ -240,11 +251,7 @@ export class KeycloakService {
     });
   }
 
-  async removeRoleFromUser(
-    tenantId: string,
-    userId: string,
-    roleName: string,
-  ) {
+  async removeRoleFromUser(tenantId: string, userId: string, roleName: string) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
     const role = await this.kcAdminClient.roles.findOneByName({
@@ -424,10 +431,7 @@ export class KeycloakService {
   async setTenantStatus(tenantId: string, enabled: boolean) {
     await this.authenticate();
     const realmName = `tenant-${tenantId}`;
-    await this.kcAdminClient.realms.update(
-      { realm: realmName },
-      { enabled },
-    );
+    await this.kcAdminClient.realms.update({ realm: realmName }, { enabled });
     return { success: true, enabled };
   }
 
@@ -438,4 +442,3 @@ export class KeycloakService {
     return { success: true };
   }
 }
-
