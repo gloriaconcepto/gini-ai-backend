@@ -10,10 +10,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { ApiKeyGuard } from './guards/api-key.guard';
 
 @Module({
-  imports: [
-    PassportModule,
-    ConfigModule,
-  ],
+  imports: [PassportModule, ConfigModule],
   providers: [KeycloakService, ApiKeyService, JwtStrategy, ApiKeyGuard],
   controllers: [IamController, SystemController, ApiKeyController],
   exports: [KeycloakService, ApiKeyService, ApiKeyGuard],

@@ -25,8 +25,15 @@ export class MasterAdminGuard implements CanActivate {
       );
     }
 
-    // Must have the master realm's admin role
-    if (!user.roles || !user.roles.includes('admin')) {
+    // Must have the master realm's admin role or be master admin
+    const isMasterAdmin =
+      (user.roles &&
+        (user.roles.includes('admin') ||
+          user.roles.includes('realm-admin') ||
+          user.roles.includes('manage-realm'))) ||
+      user.username === 'admin';
+
+    if (!isMasterAdmin) {
       throw new ForbiddenException(
         'Access denied: User does not have the admin role in the master realm',
       );

@@ -128,7 +128,10 @@ export class CreateIdpDto {
 }
 
 export class UpdateIamUserDto {
-  @ApiPropertyOptional({ example: 'john@example.com', description: 'Updated email address' })
+  @ApiPropertyOptional({
+    example: 'john@example.com',
+    description: 'Updated email address',
+  })
   @IsEmail()
   @IsOptional()
   email?: string;
@@ -143,26 +146,38 @@ export class UpdateIamUserDto {
   @IsOptional()
   lastName?: string;
 
-  @ApiPropertyOptional({ example: true, description: 'Whether the user account is enabled' })
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Whether the user account is enabled',
+  })
   @IsBoolean()
   @IsOptional()
   enabled?: boolean;
 }
 
 export class ResetPasswordDto {
-  @ApiProperty({ example: 'NewSecureP@ssw0rd', description: 'New password for the user' })
+  @ApiProperty({
+    example: 'NewSecureP@ssw0rd',
+    description: 'New password for the user',
+  })
   @IsString()
   @IsNotEmpty()
   password: string;
 
-  @ApiPropertyOptional({ example: false, description: 'Require user to change password on next login' })
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Require user to change password on next login',
+  })
   @IsBoolean()
   @IsOptional()
   temporary?: boolean;
 }
 
 export class UpdateIdpDto {
-  @ApiPropertyOptional({ example: 'Google Workspace SSO', description: 'Display name for IDP' })
+  @ApiPropertyOptional({
+    example: 'Google Workspace SSO',
+    description: 'Display name for IDP',
+  })
   @IsString()
   @IsOptional()
   displayName?: string;
@@ -182,19 +197,27 @@ export class UpdateIdpDto {
 }
 
 export class TenantStatusDto {
-  @ApiProperty({ example: true, description: 'Set tenant realm status (enabled or disabled)' })
+  @ApiProperty({
+    example: true,
+    description: 'Set tenant realm status (enabled or disabled)',
+  })
   @IsBoolean()
   enabled: boolean;
 }
 
 export class CreateApiKeyDto {
-  @ApiProperty({ example: 'Backend Ingestion Service', description: 'Name/label for the API Key' })
+  @ApiProperty({
+    example: 'Backend Ingestion Service',
+    description: 'Name/label for the API Key',
+  })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiPropertyOptional({ example: 30, description: 'Expiration period in days (optional)' })
+  @ApiPropertyOptional({
+    example: 30,
+    description: 'Expiration period in days (optional)',
+  })
   @IsOptional()
   expiresInDays?: number;
 }
-

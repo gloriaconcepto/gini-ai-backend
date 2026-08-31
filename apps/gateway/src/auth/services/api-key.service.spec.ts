@@ -33,7 +33,9 @@ describe('ApiKeyService', () => {
   });
 
   it('should reject an invalid or unknown API key', async () => {
-    const validation = await service.validateApiKey('gk_invalidkey123456789012345678901234567890');
+    const validation = await service.validateApiKey(
+      'gk_invalidkey123456789012345678901234567890',
+    );
     expect(validation.valid).toBe(false);
   });
 

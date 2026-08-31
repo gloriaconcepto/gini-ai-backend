@@ -27,3 +27,16 @@ variable "db_admin_password" {
   sensitive   = true
   description = "PostgreSQL Flexible Server administrator password."
 }
+
+variable "keycloak_admin_client_id" {
+  type        = string
+  default     = "gini-gateway-service"
+  description = "Keycloak confidential client ID for Gateway administrative access."
+}
+
+variable "keycloak_admin_client_secret" {
+  type        = string
+  sensitive   = true
+  default     = "2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3"
+  description = "Keycloak confidential client secret for Gateway administrative access."
+}

@@ -13,6 +13,7 @@ export interface KeycloakJwtPayload {
   realm_access?: {
     roles: string[];
   };
+  resource_access?: Record<string, { roles: string[] }>;
 }
 
 export interface AuthenticatedUser {
@@ -102,11 +103,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
     }
 
+    const realmRoles = payload.realm_access?.roles || [];
+    const clientRoles = Object.values(payload.resource_access || {}).flatMap(
+      (resource) => resource.roles || [],
+    );
+    const allRoles = Array.from(new Set([...realmRoles, ...clientRoles]));
+
     return {
       userId: payload.sub,
       username: payload.preferred_username,
       tenantId,
-      roles: payload.realm_access?.roles || [],
+      roles: allRoles,
       issuer: payload.iss,
     };
   }

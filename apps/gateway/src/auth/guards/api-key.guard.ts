@@ -13,7 +13,9 @@ export class ApiKeyGuard implements CanActivate {
   constructor(private readonly apiKeyService: ApiKeyService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { user?: AuthenticatedUser }>();
     const authHeader = request.headers['authorization'];
     const apiKeyHeader = request.headers['x-api-key'] as string;
 

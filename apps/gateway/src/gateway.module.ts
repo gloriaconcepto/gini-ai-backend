@@ -5,9 +5,13 @@ import { GatewayController } from './gateway.controller';
 import { GatewayService } from './gateway.service';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { validateConfig } from './config.validation';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), AuthModule],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true, validate: validateConfig }),
+    AuthModule,
+  ],
   controllers: [GatewayController],
   providers: [
     GatewayService,
