@@ -104,6 +104,10 @@ export class KeycloakService {
         realm: realmName,
         displayName: tenantName,
         enabled: true,
+        loginTheme: 'gini-theme',
+        accountTheme: 'gini-theme',
+        adminTheme: 'gini-theme',
+        emailTheme: 'gini-theme',
         attributes: attributes || {},
       });
 
@@ -362,7 +366,10 @@ export class KeycloakService {
       });
       return { success: true, role: dto.name };
     } catch (error) {
-      this.handleKeycloakError(error, `Tenant realm tenant-${tenantId} not found`);
+      this.handleKeycloakError(
+        error,
+        `Tenant realm tenant-${tenantId} not found`,
+      );
     }
   }
 
@@ -516,7 +523,10 @@ export class KeycloakService {
   }
 
   private handleKeycloakError(error: unknown, notFoundMessage: string): never {
-    const err = error as { response?: { status?: number }; responseData?: { errorMessage?: string; error?: string } };
+    const err = error as {
+      response?: { status?: number };
+      responseData?: { errorMessage?: string; error?: string };
+    };
     const status = err?.response?.status;
     const msg = err?.responseData?.errorMessage || err?.responseData?.error;
 
@@ -587,7 +597,9 @@ export class KeycloakService {
     await this.authenticate();
     const realmName = await this.resolveRealmName(tenantId);
     try {
-      const realm = await this.kcAdminClient.realms.findOne({ realm: realmName });
+      const realm = await this.kcAdminClient.realms.findOne({
+        realm: realmName,
+      });
       if (!realm) {
         throw new NotFoundException(`Tenant realm ${realmName} not found`);
       }
