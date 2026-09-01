@@ -28,7 +28,7 @@ export class KeycloakService {
     this.kcAdminClient = new KcAdminClient({
       baseUrl: this.configService.get<string>(
         'KEYCLOAK_URL',
-        'http://localhost:8080',
+        'https://ca-keycloak-dev.icydesert-52be3dab.westus.azurecontainerapps.io',
       ),
       realmName: 'master',
     });
@@ -43,7 +43,7 @@ export class KeycloakService {
     );
     const baseUrl = this.configService.get<string>(
       'KEYCLOAK_URL',
-      'http://localhost:8080',
+      'https://ca-keycloak-dev.icydesert-52be3dab.westus.azurecontainerapps.io',
     );
 
     if (
