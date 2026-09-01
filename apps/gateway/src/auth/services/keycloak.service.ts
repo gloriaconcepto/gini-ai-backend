@@ -17,6 +17,7 @@ import {
   CreateIdpDto,
   UpdateIdpDto,
 } from '../dto/iam.dtos';
+import { CreateTenantResponseDto } from '../dto/create-tenant.dto';
 
 @Injectable()
 export class KeycloakService {
@@ -93,11 +94,13 @@ export class KeycloakService {
     adminEmail?: string,
     adminPassword?: string,
     attributes?: Record<string, string>,
-  ) {
+    clientId?: string,
+  ): Promise<CreateTenantResponseDto> {
     try {
       await this.authenticate();
 
       const realmName = `tenant-${tenantId}`;
+      const targetClientId = clientId || 'gini-frontend';
 
       // 1. Create the new tenant realm
       await this.kcAdminClient.realms.create({
@@ -118,7 +121,18 @@ export class KeycloakService {
 
       // 2. Pre-provision standard governance roles for Gini Platform
       const standardRoles = [
-        { name: 'admin', description: 'Tenant Administrator' },
+        { name: 'Maker', description: 'Maker Role - Dual Control Submitter' },
+        {
+          name: 'Checker',
+          description: 'Checker Role - Dual Control Approver',
+        },
+        {
+          name: 'Auditor',
+          description: 'System Auditor - Read Only Compliance',
+        },
+        { name: 'User', description: 'Standard Tenant User' },
+        { name: 'Admin', description: 'Tenant Administrator' },
+        // Lowercase aliases for backward compatibility
         { name: 'maker', description: 'Maker Role - Dual Control Submitter' },
         {
           name: 'checker',
@@ -129,6 +143,7 @@ export class KeycloakService {
           description: 'System Auditor - Read Only Compliance',
         },
         { name: 'user', description: 'Standard Tenant User' },
+        { name: 'admin', description: 'Tenant Administrator' },
       ];
 
       for (const role of standardRoles) {
@@ -139,28 +154,21 @@ export class KeycloakService {
         });
       }
 
-      // 3. Provision default SPA Frontend Client & Mock Dashboard Client
-      const clientConfigs = [
-        { clientId: 'gini-frontend', name: 'Gini Frontend SPA' },
-        { clientId: 'giniai-dashboard-mock', name: 'Gini Mock Dashboard' },
-      ];
-
-      for (const clientCfg of clientConfigs) {
-        await this.kcAdminClient.clients.create({
-          realm: realmName,
-          clientId: clientCfg.clientId,
-          name: clientCfg.name,
-          publicClient: true,
-          directAccessGrantsEnabled: true,
-          standardFlowEnabled: true,
-          redirectUris: ['*'],
-          webOrigins: ['*'],
-          attributes: {
-            'pkce.code.challenge.method': 'S256',
-            'post.logout.redirect.uris': '*',
-          },
-        });
-      }
+      // 3. Provision default SPA Frontend Client in the tenant realm
+      await this.kcAdminClient.clients.create({
+        realm: realmName,
+        clientId: targetClientId,
+        name: `${tenantName} Frontend SPA`,
+        publicClient: true,
+        directAccessGrantsEnabled: true,
+        standardFlowEnabled: true,
+        redirectUris: ['*'],
+        webOrigins: ['*'],
+        attributes: {
+          'pkce.code.challenge.method': 'S256',
+          'post.logout.redirect.uris': '*',
+        },
+      });
 
       // 4. Create default tenant admin user if credentials provided
       if (adminEmail && adminPassword) {
@@ -182,29 +190,60 @@ export class KeycloakService {
           ],
         });
 
-        const adminRole = await this.kcAdminClient.roles.findOneByName({
-          realm: realmName,
-          name: 'admin',
-        });
+        const rolesToAssign: { id: string; name: string }[] = [];
+        for (const adminRoleName of ['Admin', 'admin']) {
+          const roleRecord = await this.kcAdminClient.roles.findOneByName({
+            realm: realmName,
+            name: adminRoleName,
+          });
+          if (roleRecord?.id && roleRecord?.name) {
+            rolesToAssign.push({ id: roleRecord.id, name: roleRecord.name });
+          }
+        }
 
-        if (adminRole && adminRole.id && adminRole.name) {
+        if (rolesToAssign.length > 0) {
           await this.kcAdminClient.users.addRealmRoleMappings({
             realm: realmName,
             id: user.id,
-            roles: [
-              {
-                id: adminRole.id,
-                name: adminRole.name,
-              },
-            ],
+            roles: rolesToAssign,
           });
           this.logger.log(
-            `Provisioned default admin user (${adminEmail}) with 'admin' role in ${realmName}`,
+            `Provisioned default admin user (${adminEmail}) with 'Admin' role in ${realmName}`,
           );
         }
       }
 
-      return { success: true, realm: realmName };
+      const response: CreateTenantResponseDto = {
+        tenantId,
+        tenantName,
+        realm: realmName,
+        clientId: targetClientId,
+        adminEmail: adminEmail || '',
+        enabled: true,
+        roles: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
+        ...(attributes?.industry ? { industry: attributes.industry } : {}),
+        ...(attributes?.domainName
+          ? { domainName: attributes.domainName }
+          : {}),
+        ...(attributes?.subscriptionTier
+          ? {
+              subscriptionTier: attributes.subscriptionTier as
+                | 'Basic'
+                | 'Pro'
+                | 'Enterprise',
+            }
+          : {}),
+        ...(attributes?.taxId ? { taxId: attributes.taxId } : {}),
+        ...(attributes?.billingAddress
+          ? { billingAddress: attributes.billingAddress }
+          : {}),
+        ...(attributes?.contactPhone
+          ? { contactPhone: attributes.contactPhone }
+          : {}),
+        createdAt: new Date().toISOString(),
+      };
+
+      return response;
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.logger.error(

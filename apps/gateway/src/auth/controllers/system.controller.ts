@@ -20,7 +20,10 @@ import {
 import { KeycloakService } from '../services/keycloak.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { MasterAdminGuard } from '../guards/master-admin.guard';
-import { CreateTenantDto } from '../dto/create-tenant.dto';
+import {
+  CreateTenantDto,
+  CreateTenantResponseDto,
+} from '../dto/create-tenant.dto';
 import { TenantStatusDto } from '../dto/iam.dtos';
 
 import type RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
@@ -37,6 +40,7 @@ export class SystemController {
   @ApiResponse({
     status: 201,
     description: 'The tenant realm has been successfully provisioned.',
+    type: CreateTenantResponseDto,
     headers: {
       'X-Tenant-ID': {
         description: 'The unique ID of the newly created tenant',
@@ -51,7 +55,7 @@ export class SystemController {
   async createTenant(
     @Body() body: CreateTenantDto,
     @Res({ passthrough: true }) res: Response,
-  ) {
+  ): Promise<CreateTenantResponseDto> {
     const tenantId = randomUUID();
     const attributes: Record<string, string> = {};
     if (body.industry) attributes.industry = body.industry;
@@ -68,6 +72,7 @@ export class SystemController {
       body.adminEmail,
       body.adminPassword,
       attributes,
+      body.clientId,
     );
     res.header('X-Tenant-ID', tenantId);
     return result;
