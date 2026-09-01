@@ -272,7 +272,8 @@ resource "azurerm_container_app" "gateway" {
   }
 
   identity {
-    type = "SystemAssigned"
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.gateway_identity.id]
   }
 
   secret {
@@ -283,13 +284,13 @@ resource "azurerm_container_app" "gateway" {
   secret {
     name                = "database-url"
     key_vault_secret_id = azurerm_key_vault_secret.database_url.id
-    identity            = "SystemAssigned"
+    identity            = azurerm_user_assigned_identity.gateway_identity.id
   }
 
   secret {
     name                = "keycloak-admin-client-secret"
     key_vault_secret_id = azurerm_key_vault_secret.keycloak_admin_client_secret.id
-    identity            = "SystemAssigned"
+    identity            = azurerm_user_assigned_identity.gateway_identity.id
   }
 
   registry {
@@ -467,6 +468,12 @@ resource "azurerm_key_vault" "kv" {
   sku_name = "standard"
 }
 
+resource "azurerm_user_assigned_identity" "gateway_identity" {
+  name                = "id-gateway-${var.environment}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
 resource "azurerm_role_assignment" "terraform_kv_admin" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Administrator"
@@ -476,7 +483,7 @@ resource "azurerm_role_assignment" "terraform_kv_admin" {
 resource "azurerm_role_assignment" "gateway_kv_secrets_user" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_container_app.gateway.identity[0].principal_id
+  principal_id         = azurerm_user_assigned_identity.gateway_identity.principal_id
 }
 
 resource "azurerm_key_vault_secret" "database_url" {
