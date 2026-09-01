@@ -11,11 +11,11 @@ terraform {
     }
   }
 }
-  
+
 provider "azurerm" {
-#   subscription_id = "d6d62d88-dd8e-4d3e-b68f-14d2be8a33d2"
-#   tenant_id       = "ee8b6be7-3ccd-4c59-b957-60baaa805c5f"
-  
+  #   subscription_id = "d6d62d88-dd8e-4d3e-b68f-14d2be8a33d2"
+  #   tenant_id       = "ee8b6be7-3ccd-4c59-b957-60baaa805c5f"
+
   features {
     key_vault {
       purge_soft_delete_on_destroy    = false
@@ -110,7 +110,7 @@ resource "azurerm_postgresql_flexible_server" "postgres" {
   administrator_login           = var.db_admin_username
   administrator_password        = var.db_admin_password
   sku_name                      = "B_Standard_B2s"
-  
+
   depends_on = [azurerm_private_dns_zone_virtual_network_link.pg_dns_link]
 }
 
@@ -121,10 +121,10 @@ resource "azurerm_postgresql_flexible_server_configuration" "pg_extensions" {
 }
 
 resource "azurerm_postgresql_flexible_server_database" "app_db" {
-  name      = "ginidb"
-  server_id = azurerm_postgresql_flexible_server.postgres.id
-  collation = "en_US.utf8"
-  charset   = "utf8"
+  name       = "ginidb"
+  server_id  = azurerm_postgresql_flexible_server.postgres.id
+  collation  = "en_US.utf8"
+  charset    = "utf8"
   depends_on = [azurerm_postgresql_flexible_server_configuration.pg_extensions]
 }
 
@@ -152,7 +152,7 @@ resource "azurerm_container_app_environment" "aca_env" {
   resource_group_name        = azurerm_resource_group.rg.name
   log_analytics_workspace_id = azurerm_log_analytics_workspace.logs.id
   infrastructure_subnet_id   = azurerm_subnet.aca_subnet.id
-  
+
   workload_profile {
     name                  = "Consumption"
     workload_profile_type = "Consumption"
@@ -246,7 +246,7 @@ resource "azurerm_container_app" "keycloak" {
       }
       env {
         name  = "KEYCLOAK_ADMIN_PASSWORD"
-        value = "admin" 
+        value = "admin"
       }
       env {
         name  = "KC_PROXY"
@@ -272,7 +272,8 @@ resource "azurerm_container_app" "gateway" {
   }
 
   identity {
-    type = "SystemAssigned"
+    type         = "UserAssigned"
+    identity_ids = [azurerm_user_assigned_identity.gateway_identity.id]
   }
 
   secret {
@@ -283,13 +284,13 @@ resource "azurerm_container_app" "gateway" {
   secret {
     name                = "database-url"
     key_vault_secret_id = azurerm_key_vault_secret.database_url.id
-    identity            = "SystemAssigned"
+    identity            = azurerm_user_assigned_identity.gateway_identity.id
   }
 
   secret {
     name                = "keycloak-admin-client-secret"
     key_vault_secret_id = azurerm_key_vault_secret.keycloak_admin_client_secret.id
-    identity            = "SystemAssigned"
+    identity            = azurerm_user_assigned_identity.gateway_identity.id
   }
 
   registry {
@@ -302,7 +303,7 @@ resource "azurerm_container_app" "gateway" {
     min_replicas = 1
     max_replicas = 5
     container {
-      name   = "api-gateway"
+      name = "api-gateway"
       # Placeholder image used to bootstrap the infrastructure.
       # A CI/CD pipeline should build, push the real image, and update this container app.
       image  = "node:20-alpine"
@@ -340,7 +341,109 @@ resource "azurerm_container_app" "gateway" {
 }
 
 # -----------------------------------------------------------------------------
-# 5. STORAGE & SECURITY & MISC
+# 5. FRONTEND CONTAINER APPS
+# -----------------------------------------------------------------------------
+locals {
+  frontend_apps = {
+    "manager-app" = {
+      target_port  = 80
+      cpu          = 0.25
+      memory       = "0.5Gi"
+      min_replicas = 1
+      max_replicas = 3
+    }
+    "oem-backoffice" = {
+      target_port  = 80
+      cpu          = 0.25
+      memory       = "0.5Gi"
+      min_replicas = 1
+      max_replicas = 3
+    }
+    "tenant-admin" = {
+      target_port  = 80
+      cpu          = 0.25
+      memory       = "0.5Gi"
+      min_replicas = 1
+      max_replicas = 3
+    }
+    "user-app" = {
+      target_port  = 80
+      cpu          = 0.25
+      memory       = "0.5Gi"
+      min_replicas = 1
+      max_replicas = 3
+    }
+  }
+}
+
+resource "azurerm_container_app" "frontend" {
+  for_each                     = local.frontend_apps
+  name                         = "ca-${each.key}-${var.environment}"
+  resource_group_name          = azurerm_resource_group.rg.name
+  container_app_environment_id = azurerm_container_app_environment.aca_env.id
+  revision_mode                = "Single"
+
+  ingress {
+    external_enabled = true
+    target_port      = each.value.target_port
+    traffic_weight {
+      percentage      = 100
+      latest_revision = true
+    }
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  secret {
+    name  = "acr-password"
+    value = azurerm_container_registry.acr.admin_password
+  }
+
+  registry {
+    server               = azurerm_container_registry.acr.login_server
+    username             = azurerm_container_registry.acr.admin_username
+    password_secret_name = "acr-password"
+  }
+
+  template {
+    min_replicas = each.value.min_replicas
+    max_replicas = each.value.max_replicas
+    container {
+      name   = each.key
+      image  = "nginx:alpine"
+      cpu    = each.value.cpu
+      memory = each.value.memory
+
+      env {
+        name  = "GATEWAY_URL"
+        value = "https://${azurerm_container_app.gateway.ingress[0].fqdn}"
+      }
+      env {
+        name  = "KEYCLOAK_URL"
+        value = "https://${azurerm_container_app.keycloak.ingress[0].fqdn}"
+      }
+      env {
+        name  = "APP_NAME"
+        value = each.key
+      }
+      env {
+        name  = "ENVIRONMENT"
+        value = var.environment
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].container[0].image
+    ]
+  }
+}
+
+# -----------------------------------------------------------------------------
+# 6. STORAGE & SECURITY & MISC
 # -----------------------------------------------------------------------------
 data "azurerm_client_config" "current" {}
 
@@ -365,6 +468,12 @@ resource "azurerm_key_vault" "kv" {
   sku_name = "standard"
 }
 
+resource "azurerm_user_assigned_identity" "gateway_identity" {
+  name                = "id-gateway-${var.environment}"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
 resource "azurerm_role_assignment" "terraform_kv_admin" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Administrator"
@@ -374,7 +483,7 @@ resource "azurerm_role_assignment" "terraform_kv_admin" {
 resource "azurerm_role_assignment" "gateway_kv_secrets_user" {
   scope                = azurerm_key_vault.kv.id
   role_definition_name = "Key Vault Secrets User"
-  principal_id         = azurerm_container_app.gateway.identity[0].principal_id
+  principal_id         = azurerm_user_assigned_identity.gateway_identity.principal_id
 }
 
 resource "azurerm_key_vault_secret" "database_url" {
