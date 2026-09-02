@@ -216,7 +216,7 @@ resource "azurerm_container_app" "keycloak" {
 
   template {
     min_replicas = 1
-    max_replicas = 2
+    max_replicas = 1
     container {
       name   = "keycloak"
       image  = "quay.io/keycloak/keycloak:24.0.0"
@@ -249,8 +249,12 @@ resource "azurerm_container_app" "keycloak" {
         value = "admin"
       }
       env {
-        name  = "KC_PROXY"
-        value = "edge"
+        name  = "KC_PROXY_HEADERS"
+        value = "xforwarded"
+      }
+      env {
+        name  = "KC_HOSTNAME_STRICT"
+        value = "false"
       }
     }
   }
@@ -281,6 +285,8 @@ resource "azurerm_container_app" "gateway" {
     value = azurerm_container_registry.acr.admin_password
   }
 
+
+
   secret {
     name                = "database-url"
     key_vault_secret_id = azurerm_key_vault_secret.database_url.id
@@ -304,9 +310,8 @@ resource "azurerm_container_app" "gateway" {
     max_replicas = 5
     container {
       name = "api-gateway"
-      # Placeholder image used to bootstrap the infrastructure.
       # A CI/CD pipeline should build, push the real image, and update this container app.
-      image  = "node:20-alpine"
+      image  = "${azurerm_container_registry.acr.login_server}/gini-gateway-service:v1.0.1"
       cpu    = 1.0
       memory = "2Gi"
 
@@ -333,11 +338,7 @@ resource "azurerm_container_app" "gateway" {
     }
   }
 
-  lifecycle {
-    ignore_changes = [
-      template[0].container[0].image
-    ]
-  }
+
 }
 
 # -----------------------------------------------------------------------------
@@ -437,7 +438,9 @@ resource "azurerm_container_app" "frontend" {
 
   lifecycle {
     ignore_changes = [
-      template[0].container[0].image
+      template[0].container[0].image,
+      secret,
+      registry
     ]
   }
 }
