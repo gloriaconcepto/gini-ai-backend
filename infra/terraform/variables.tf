@@ -37,6 +37,5 @@ variable "keycloak_admin_client_id" {
 variable "keycloak_admin_client_secret" {
   type        = string
   sensitive   = true
-  default     = "2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3"
   description = "Keycloak confidential client secret for Gateway administrative access."
 }
