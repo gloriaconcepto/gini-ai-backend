@@ -9,7 +9,12 @@ import { validateConfig } from './config.validation';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, validate: validateConfig }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath:
+        process.env.APP_ENV === 'remote' ? '.env.remote' : '.env.local',
+      validate: validateConfig,
+    }),
     AuthModule,
   ],
   controllers: [GatewayController],

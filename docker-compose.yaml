@@ -67,7 +67,7 @@ services:
       - KEYCLOAK_URL=http://keycloak:8080
       - REDIS_HOST=redis
     env_file:
-      - .env
+      - .env.local
     depends_on:
       - postgres
       - keycloak
