@@ -26,11 +26,11 @@ export class KeycloakService {
 
   constructor(private configService: ConfigService) {
     this.kcAdminClient = new KcAdminClient({
-      baseUrl: this.configService.get<string>(
-        'KEYCLOAK_URL',
-        'http://localhost:8080',
-      ),
-      realmName: 'master',
+      baseUrl: this.configService
+        .getOrThrow<string>('KEYCLOAK_URL')
+        .replace(/\/+$/, '')
+        .trim(),
+      realmName: this.configService.get<string>('KEYCLOAK_ADMIN_REALM', 'master'),
     });
   }
 
@@ -41,9 +41,13 @@ export class KeycloakService {
     const clientSecret = this.configService.getOrThrow<string>(
       'KEYCLOAK_ADMIN_CLIENT_SECRET',
     );
-    const baseUrl = this.configService.get<string>(
-      'KEYCLOAK_URL',
-      'http://localhost:8080',
+    const baseUrl = this.configService
+      .getOrThrow<string>('KEYCLOAK_URL')
+      .replace(/\/+$/, '')
+      .trim();
+    const adminRealm = this.configService.get<string>(
+      'KEYCLOAK_ADMIN_REALM',
+      'master',
     );
 
     if (
@@ -55,7 +59,7 @@ export class KeycloakService {
     }
 
     try {
-      const tokenUrl = `${baseUrl}/realms/master/protocol/openid-connect/token`;
+      const tokenUrl = `${baseUrl}/realms/${adminRealm}/protocol/openid-connect/token`;
       const params = new URLSearchParams({
         grant_type: 'client_credentials',
         client_id: clientId,
