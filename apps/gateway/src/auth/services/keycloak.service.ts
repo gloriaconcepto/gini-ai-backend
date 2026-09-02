@@ -41,14 +41,6 @@ export class KeycloakService {
     const clientSecret = this.configService.getOrThrow<string>(
       'KEYCLOAK_ADMIN_CLIENT_SECRET',
     );
-    const baseUrl = this.configService
-      .getOrThrow<string>('KEYCLOAK_URL')
-      .replace(/\/+$/, '')
-      .trim();
-    const adminRealm = this.configService.get<string>(
-      'KEYCLOAK_ADMIN_REALM',
-      'master',
-    );
 
     if (
       !forceRefresh &&
@@ -59,30 +51,11 @@ export class KeycloakService {
     }
 
     try {
-      const tokenUrl = `${baseUrl}/realms/${adminRealm}/protocol/openid-connect/token`;
-      const params = new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
+      await this.kcAdminClient.auth({
+        grantType: 'client_credentials',
+        clientId,
+        clientSecret,
       });
-
-      const response = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: params.toString(),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(
-          `Keycloak token endpoint responded with status ${response.status}: ${errorBody}`,
-        );
-      }
-
-      const data = (await response.json()) as { access_token: string };
-      this.kcAdminClient.setAccessToken(data.access_token);
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.error(
