@@ -328,7 +328,7 @@ resource "azurerm_container_app" "gateway" {
       }
       env {
         name  = "KEYCLOAK_URL"
-        value = "https://${azurerm_container_app.keycloak.ingress[0].fqdn}/realms/gini-tenant"
+        value = "https://${azurerm_container_app.keycloak.ingress[0].fqdn}"
       }
     }
   }
