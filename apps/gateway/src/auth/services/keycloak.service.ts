@@ -51,11 +51,30 @@ export class KeycloakService {
     }
 
     try {
-      await this.kcAdminClient.auth({
-        grantType: 'client_credentials',
-        clientId,
-        clientSecret,
+      // Workaround for @keycloak/keycloak-admin-client bug with client_credentials (it tries to decode an undefined refresh_token)
+      let baseUrl = this.configService.getOrThrow<string>('KEYCLOAK_URL').trim();
+      if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
+      const realmName = this.configService.get<string>('KEYCLOAK_ADMIN_REALM', 'master');
+      const tokenUrl = `${baseUrl}/realms/${realmName}/protocol/openid-connect/token`;
+
+      const body = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: clientId,
+        client_secret: clientSecret,
       });
+
+      const response = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Token fetch failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      this.kcAdminClient.setAccessToken(data.access_token);
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       this.logger.error(
