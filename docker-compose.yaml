@@ -23,7 +23,7 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
     volumes:
       - ./infra/keycloak/master-realm.json:/opt/keycloak/data/import/master-realm.json:ro
-      - ./dist_keycloak/keycloak-theme-for-kc-22-to-25.jar:/opt/keycloak/providers/gini-theme.jar:ro
+      # - ./dist_keycloak/keycloak-theme-for-kc-22-to-25.jar:/opt/keycloak/providers/gini-theme.jar:ro
     command: start-dev --import-realm
     ports:
       - '8080:8080'

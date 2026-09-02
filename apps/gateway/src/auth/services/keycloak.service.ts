@@ -84,10 +84,10 @@ export class KeycloakService {
         realm: realmName,
         displayName: tenantName,
         enabled: true,
-        loginTheme: 'gini-theme',
-        accountTheme: 'gini-theme',
-        adminTheme: 'gini-theme',
-        emailTheme: 'gini-theme',
+        // loginTheme: 'gini-theme',
+        // accountTheme: 'gini-theme',
+        // adminTheme: 'gini-theme',
+        // emailTheme: 'gini-theme',
         attributes: attributes || {},
       });
 
