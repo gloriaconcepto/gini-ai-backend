@@ -60,6 +60,7 @@ describe('KeycloakService', () => {
               return defaultValue;
             }),
             getOrThrow: jest.fn((key: string) => {
+              if (key === 'KEYCLOAK_URL') return 'http://localhost:8080';
               if (key === 'KEYCLOAK_ADMIN_CLIENT_ID') return 'gini-gateway-service';
               if (key === 'KEYCLOAK_ADMIN_CLIENT_SECRET') return 'test-secret';
               throw new Error(`Configuration key "${key}" does not exist`);
@@ -207,6 +208,8 @@ describe('KeycloakService', () => {
         adminPassword,
         attributes,
         'custom-frontend-client',
+        'Alice',
+        'Smith',
       );
 
       // Verify realm creation
@@ -242,12 +245,14 @@ describe('KeycloakService', () => {
         }),
       );
 
-      // Verify default admin user creation & role mapping
+      // Verify default admin user creation & role mapping with custom first & last names
       expect(mockUsersCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           realm: `tenant-${tenantId}`,
           username: adminEmail,
           email: adminEmail,
+          firstName: 'Alice',
+          lastName: 'Smith',
         }),
       );
       expect(mockUsersAddRealmRoleMappings).toHaveBeenCalledWith({
@@ -265,6 +270,8 @@ describe('KeycloakService', () => {
         realm: `tenant-${tenantId}`,
         clientId: 'custom-frontend-client',
         adminEmail,
+        adminFirstName: 'Alice',
+        adminLastName: 'Smith',
         enabled: true,
         roles: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
         industry: 'Finance',
@@ -276,6 +283,32 @@ describe('KeycloakService', () => {
       });
       expect(result.createdAt).toBeDefined();
       expect((result as any).adminPassword).toBeUndefined();
+    });
+
+    it('should fallback to default Admin and User when adminFirstName and adminLastName are omitted', async () => {
+      const tenantId = 'tenant-id-defaults';
+      const tenantName = 'Default User Corp';
+      const adminEmail = 'admin@defaults.com';
+      const adminPassword = 'securePassword123';
+
+      const result = await service.provisionTenantRealm(
+        tenantId,
+        tenantName,
+        adminEmail,
+        adminPassword,
+      );
+
+      expect(mockUsersCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          realm: `tenant-${tenantId}`,
+          username: adminEmail,
+          email: adminEmail,
+          firstName: 'Admin',
+          lastName: 'User',
+        }),
+      );
+      expect(result.adminFirstName).toBeUndefined();
+      expect(result.adminLastName).toBeUndefined();
     });
 
     it('should default client ID to gini-frontend when not provided', async () => {

@@ -20,6 +20,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - Completed Epic 1.10: Full User, Role, Client & IdP lifecycle, JWKS client caching, dynamic tenantId extraction, standard governance roles auto-provisioning (`maker`, `checker`, `auditor`, `user`, `admin`), Tenant API Key management & ApiKeyGuard.
 - Configured newly provisioned tenant realms to use the `gini-ai` theme by default.
 - Adjusted tenant creation endpoint to provision frontend client, default governance roles (Maker, Checker, Auditor, User, Admin), and return clean frontend response DTO.
+- Updated CreateTenantDto to accept admin first and last names, mapping them directly to Keycloak user attributes during tenant realm provisioning.
 
 ## Active Tasks & Epics
 - Please refer to [agent-epics.md](./agent-epics.md) for the detailed, sequential list of implementation tasks and active epics.

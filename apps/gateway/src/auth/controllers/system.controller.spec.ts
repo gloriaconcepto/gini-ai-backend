@@ -48,6 +48,8 @@ describe('SystemController', () => {
         realm: 'tenant-uuid-1234',
         clientId: 'gini-frontend',
         adminEmail: 'admin@acme.com',
+        adminFirstName: 'John',
+        adminLastName: 'Doe',
         enabled: true,
         roles: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
         industry: 'FinTech',
@@ -67,6 +69,8 @@ describe('SystemController', () => {
         tenantName: 'Acme Corp',
         adminEmail: 'admin@acme.com',
         adminPassword: 'SuperSecretPassword123!',
+        adminFirstName: 'John',
+        adminLastName: 'Doe',
         industry: 'FinTech',
         domainName: 'acme.com',
         subscriptionTier: 'Enterprise',
@@ -97,6 +101,8 @@ describe('SystemController', () => {
           contactPhone: '+1-555-1234',
         },
         'gini-frontend',
+        'John',
+        'Doe',
       );
 
       expect(setHeaderMock).toHaveBeenCalledWith(

@@ -70,7 +70,10 @@ export class KeycloakService {
       });
 
       if (!response.ok) {
-        throw new Error(`Token fetch failed: ${response.status} ${response.statusText}`);
+        const errorBody = await response.text().catch(() => '');
+        throw new Error(
+          `Keycloak token endpoint responded with status ${response.status}: ${errorBody}`,
+        );
       }
 
       const data = await response.json();
@@ -91,6 +94,8 @@ export class KeycloakService {
     adminPassword?: string,
     attributes?: Record<string, string>,
     clientId?: string,
+    adminFirstName?: string,
+    adminLastName?: string,
   ): Promise<CreateTenantResponseDto> {
     try {
       await this.authenticate();
@@ -172,8 +177,8 @@ export class KeycloakService {
           realm: realmName,
           username: adminEmail,
           email: adminEmail,
-          firstName: 'Admin',
-          lastName: 'User',
+          firstName: adminFirstName || 'Admin',
+          lastName: adminLastName || 'User',
           enabled: true,
           emailVerified: true,
           requiredActions: [],
@@ -215,6 +220,8 @@ export class KeycloakService {
         realm: realmName,
         clientId: targetClientId,
         adminEmail: adminEmail || '',
+        ...(adminFirstName ? { adminFirstName } : {}),
+        ...(adminLastName ? { adminLastName } : {}),
         enabled: true,
         roles: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
         ...(attributes?.industry ? { industry: attributes.industry } : {}),
