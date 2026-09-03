@@ -70,7 +70,10 @@ export class KeycloakService {
       });
 
       if (!response.ok) {
-        throw new Error(`Token fetch failed: ${response.status} ${response.statusText}`);
+        const errorBody = await response.text().catch(() => '');
+        throw new Error(
+          `Keycloak token endpoint responded with status ${response.status}: ${errorBody || response.statusText}`,
+        );
       }
 
       const data = await response.json();
@@ -263,14 +266,41 @@ export class KeycloakService {
   async getUserById(tenantId: string, userId: string) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
-    const user = await this.kcAdminClient.users.findOne({
-      realm,
-      id: userId,
-    });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+    try {
+      const [user, roleMappings] = await Promise.all([
+        this.kcAdminClient.users.findOne({
+          realm,
+          id: userId,
+        }),
+        this.kcAdminClient.users
+          .listRealmRoleMappings({
+            realm,
+            id: userId,
+          })
+          .catch(() => []),
+      ]);
+
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      const roles = Array.isArray(roleMappings)
+        ? roleMappings
+            .map((r) => r.name)
+            .filter(
+              (name): name is string =>
+                typeof name === 'string' && name.length > 0,
+            )
+        : [];
+
+      return {
+        ...user,
+        id: user.id ?? userId,
+        roles,
+      };
+    } catch (error) {
+      this.handleKeycloakError(error, `User with ID ${userId} not found`);
     }
-    return user;
   }
 
   async createUser(tenantId: string, dto: CreateIamUserDto) {

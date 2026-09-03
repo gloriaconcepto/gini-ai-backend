@@ -13,6 +13,8 @@ const mockRolesCreate = jest.fn();
 const mockRolesFindOneByName = jest.fn();
 const mockClientsCreate = jest.fn();
 const mockUsersCreate = jest.fn();
+const mockUsersFindOne = jest.fn();
+const mockUsersListRealmRoleMappings = jest.fn();
 const mockUsersAddRealmRoleMappings = jest.fn();
 
 jest.mock('@keycloak/keycloak-admin-client', () => {
@@ -36,6 +38,8 @@ jest.mock('@keycloak/keycloak-admin-client', () => {
       },
       users: {
         create: mockUsersCreate,
+        findOne: mockUsersFindOne,
+        listRealmRoleMappings: mockUsersListRealmRoleMappings,
         addRealmRoleMappings: mockUsersAddRealmRoleMappings,
       },
     };
@@ -60,6 +64,7 @@ describe('KeycloakService', () => {
               return defaultValue;
             }),
             getOrThrow: jest.fn((key: string) => {
+              if (key === 'KEYCLOAK_URL') return 'http://localhost:8080';
               if (key === 'KEYCLOAK_ADMIN_CLIENT_ID') return 'gini-gateway-service';
               if (key === 'KEYCLOAK_ADMIN_CLIENT_SECRET') return 'test-secret';
               throw new Error(`Configuration key "${key}" does not exist`);
@@ -294,6 +299,103 @@ describe('KeycloakService', () => {
         }),
       );
       expect(result.clientId).toEqual('gini-frontend');
+    });
+  });
+
+  describe('getUserById()', () => {
+    beforeEach(() => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ access_token: 'mock-token' }),
+      } as any);
+    });
+
+    it('should return user details along with assigned role names', async () => {
+      const tenantId = 'tenant-123';
+      const userId = 'user-abc';
+      mockUsersFindOne.mockResolvedValueOnce({
+        id: userId,
+        username: 'johndoe',
+        email: 'john@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        enabled: true,
+      });
+      mockUsersListRealmRoleMappings.mockResolvedValueOnce([
+        { id: 'role-1', name: 'admin' },
+        { id: 'role-2', name: 'maker' },
+      ]);
+
+      const result = await service.getUserById(tenantId, userId);
+
+      expect(mockUsersFindOne).toHaveBeenCalledWith({
+        realm: `tenant-${tenantId}`,
+        id: userId,
+      });
+      expect(mockUsersListRealmRoleMappings).toHaveBeenCalledWith({
+        realm: `tenant-${tenantId}`,
+        id: userId,
+      });
+      expect(result).toEqual({
+        id: userId,
+        username: 'johndoe',
+        email: 'john@example.com',
+        firstName: 'John',
+        lastName: 'Doe',
+        enabled: true,
+        roles: ['admin', 'maker'],
+      });
+    });
+
+    it('should return empty roles array when user has no assigned roles', async () => {
+      const tenantId = 'tenant-123';
+      const userId = 'user-abc';
+      mockUsersFindOne.mockResolvedValueOnce({
+        id: userId,
+        username: 'johndoe',
+        email: 'john@example.com',
+        enabled: true,
+      });
+      mockUsersListRealmRoleMappings.mockResolvedValueOnce([]);
+
+      const result = await service.getUserById(tenantId, userId);
+
+      expect(result).toEqual({
+        id: userId,
+        username: 'johndoe',
+        email: 'john@example.com',
+        enabled: true,
+        roles: [],
+      });
+    });
+
+    it('should handle role mapping error gracefully by returning empty roles array', async () => {
+      const tenantId = 'tenant-123';
+      const userId = 'user-abc';
+      mockUsersFindOne.mockResolvedValueOnce({
+        id: userId,
+        username: 'johndoe',
+        email: 'john@example.com',
+        enabled: true,
+      });
+      mockUsersListRealmRoleMappings.mockRejectedValueOnce(
+        new Error('Keycloak network failure'),
+      );
+
+      const result = await service.getUserById(tenantId, userId);
+
+      expect(result.roles).toEqual([]);
+    });
+
+    it('should throw NotFoundException when user is not found', async () => {
+      const tenantId = 'tenant-123';
+      const userId = 'non-existent-user';
+      mockUsersFindOne.mockResolvedValueOnce(null);
+      mockUsersListRealmRoleMappings.mockResolvedValueOnce([]);
+
+      await expect(service.getUserById(tenantId, userId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

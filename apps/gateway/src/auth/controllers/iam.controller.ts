@@ -33,6 +33,7 @@ import {
   CreateIamClientDto,
   CreateIdpDto,
   UpdateIdpDto,
+  IamUserResponseDto,
 } from '../dto/iam.dtos';
 
 @ApiTags('Tenant IAM')
@@ -56,7 +57,19 @@ export class IamController {
   @ApiOperation({
     summary: 'Get details of a specific user in the tenant realm',
   })
-  async getUser(@Request() req: AuthRequest, @Param('userId') userId: string) {
+  @ApiResponse({
+    status: 200,
+    description: 'Details of the requested user including assigned roles',
+    type: IamUserResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found in tenant realm',
+  })
+  async getUser(
+    @Request() req: AuthRequest,
+    @Param('userId') userId: string,
+  ): Promise<IamUserResponseDto> {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.getUserById(tenantId, userId);
   }
