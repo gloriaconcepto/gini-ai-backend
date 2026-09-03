@@ -73,6 +73,8 @@ export class SystemController {
       body.adminPassword,
       attributes,
       body.clientId,
+      body.adminFirstName,
+      body.adminLastName,
     );
     res.header('X-Tenant-ID', tenantId);
     return result;
