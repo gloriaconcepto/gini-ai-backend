@@ -8,6 +8,46 @@ import {
   IsEnum,
 } from 'class-validator';
 
+export class TenantProvisionedUserDto {
+  @ApiProperty({
+    example: 'user-uuid-1234',
+    description: 'Unique Keycloak user ID',
+  })
+  id: string;
+
+  @ApiProperty({
+    example: 'maker@acme.com',
+    description: 'Email address of the provisioned user',
+  })
+  email: string;
+
+  @ApiProperty({
+    example: 'maker@acme.com',
+    description: 'Keycloak username of the provisioned user',
+  })
+  username: string;
+
+  @ApiPropertyOptional({
+    example: 'John',
+    description: 'First name of the provisioned user',
+  })
+  firstName?: string;
+
+  @ApiPropertyOptional({
+    example: 'Doe',
+    description: 'Last name of the provisioned user',
+  })
+  lastName?: string;
+
+  @ApiProperty({
+    example: ['maker'],
+    description: 'Assigned governance roles for the user',
+    isArray: true,
+    type: String,
+  })
+  roles: string[];
+}
+
 export class CreateTenantDto {
   @ApiProperty({
     description: 'The display name of the tenant',
@@ -18,37 +58,70 @@ export class CreateTenantDto {
   tenantName: string;
 
   @ApiProperty({
-    description: 'The email address of the default tenant administrator',
-    example: 'admin@acme.com',
+    description: 'The email address of the default tenant maker',
+    example: 'maker@acme.com',
   })
   @IsEmail()
   @IsNotEmpty()
-  adminEmail: string;
+  makerEmail: string;
 
   @ApiProperty({
-    description: 'The password for the default tenant administrator',
+    description: 'The password for the default tenant maker',
     example: 'securePassword123',
   })
   @IsString()
   @IsNotEmpty()
   @MinLength(8)
-  adminPassword: string;
+  makerPassword: string;
 
   @ApiPropertyOptional({
-    description: 'The first name of the default tenant administrator',
+    description: 'The first name of the default tenant maker',
     example: 'John',
   })
   @IsString()
   @IsOptional()
-  adminFirstName?: string;
+  makerFirstName?: string;
 
   @ApiPropertyOptional({
-    description: 'The last name of the default tenant administrator',
+    description: 'The last name of the default tenant maker',
     example: 'Doe',
   })
   @IsString()
   @IsOptional()
-  adminLastName?: string;
+  makerLastName?: string;
+
+  @ApiProperty({
+    description: 'The email address of the default tenant checker',
+    example: 'checker@acme.com',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  checkerEmail: string;
+
+  @ApiProperty({
+    description: 'The password for the default tenant checker',
+    example: 'securePassword123',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8)
+  checkerPassword: string;
+
+  @ApiPropertyOptional({
+    description: 'The first name of the default tenant checker',
+    example: 'Jane',
+  })
+  @IsString()
+  @IsOptional()
+  checkerFirstName?: string;
+
+  @ApiPropertyOptional({
+    description: 'The last name of the default tenant checker',
+    example: 'Smith',
+  })
+  @IsString()
+  @IsOptional()
+  checkerLastName?: string;
 
   @ApiPropertyOptional({ example: 'Finance', description: 'Industry / Sector' })
   @IsString()
@@ -131,22 +204,16 @@ export class CreateTenantResponseDto {
   clientId: string;
 
   @ApiProperty({
-    example: 'admin@acme.com',
-    description: 'Email address of the default tenant administrator',
+    description: 'Provisioned Maker user details',
+    type: TenantProvisionedUserDto,
   })
-  adminEmail: string;
+  maker: TenantProvisionedUserDto;
 
-  @ApiPropertyOptional({
-    example: 'John',
-    description: 'First name of the default tenant administrator',
+  @ApiProperty({
+    description: 'Provisioned Checker user details',
+    type: TenantProvisionedUserDto,
   })
-  adminFirstName?: string;
-
-  @ApiPropertyOptional({
-    example: 'Doe',
-    description: 'Last name of the default tenant administrator',
-  })
-  adminLastName?: string;
+  checker: TenantProvisionedUserDto;
 
   @ApiProperty({
     example: true,
@@ -155,7 +222,7 @@ export class CreateTenantResponseDto {
   enabled: boolean;
 
   @ApiProperty({
-    example: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
+    example: ['maker', 'checker', 'auditor', 'user'],
     description: 'Default governance roles provisioned for the tenant',
     isArray: true,
     type: String,

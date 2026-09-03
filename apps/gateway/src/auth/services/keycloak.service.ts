@@ -19,6 +19,13 @@ import {
 } from '../dto/iam.dtos';
 import { CreateTenantResponseDto } from '../dto/create-tenant.dto';
 
+export interface ProvisionUserCredentials {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 @Injectable()
 export class KeycloakService {
   private readonly logger = new Logger(KeycloakService.name);
@@ -98,12 +105,10 @@ export class KeycloakService {
   async provisionTenantRealm(
     tenantId: string,
     tenantName: string,
-    adminEmail?: string,
-    adminPassword?: string,
+    maker: ProvisionUserCredentials,
+    checker: ProvisionUserCredentials,
     attributes?: Record<string, string>,
     clientId?: string,
-    adminFirstName?: string,
-    adminLastName?: string,
   ): Promise<CreateTenantResponseDto> {
     try {
       await this.authenticate();
@@ -128,20 +133,8 @@ export class KeycloakService {
       // Refresh admin token so it contains the audience & permissions for the newly created realm
       await this.authenticate(true);
 
-      // 2. Pre-provision standard governance roles for Gini Platform
+      // 2. Pre-provision standard governance roles for Gini Platform (lowercase only, no admin)
       const standardRoles = [
-        { name: 'Maker', description: 'Maker Role - Dual Control Submitter' },
-        {
-          name: 'Checker',
-          description: 'Checker Role - Dual Control Approver',
-        },
-        {
-          name: 'Auditor',
-          description: 'System Auditor - Read Only Compliance',
-        },
-        { name: 'User', description: 'Standard Tenant User' },
-        { name: 'Admin', description: 'Tenant Administrator' },
-        // Lowercase aliases for backward compatibility
         { name: 'maker', description: 'Maker Role - Dual Control Submitter' },
         {
           name: 'checker',
@@ -152,7 +145,6 @@ export class KeycloakService {
           description: 'System Auditor - Read Only Compliance',
         },
         { name: 'user', description: 'Standard Tenant User' },
-        { name: 'admin', description: 'Tenant Administrator' },
       ];
 
       for (const role of standardRoles) {
@@ -179,47 +171,72 @@ export class KeycloakService {
         },
       });
 
-      // 4. Create default tenant admin user if credentials provided
-      if (adminEmail && adminPassword) {
-        const user = await this.kcAdminClient.users.create({
+      // 4. Create default Maker user
+      const makerUserRecord = await this.kcAdminClient.users.create({
+        realm: realmName,
+        username: maker.email,
+        email: maker.email,
+        firstName: maker.firstName || 'Maker',
+        lastName: maker.lastName || 'User',
+        enabled: true,
+        emailVerified: true,
+        requiredActions: [],
+        credentials: [
+          {
+            type: 'password',
+            value: maker.password,
+            temporary: false,
+          },
+        ],
+      });
+
+      const makerRole = await this.kcAdminClient.roles.findOneByName({
+        realm: realmName,
+        name: 'maker',
+      });
+      if (makerRole?.id && makerRole?.name) {
+        await this.kcAdminClient.users.addRealmRoleMappings({
           realm: realmName,
-          username: adminEmail,
-          email: adminEmail,
-          firstName: adminFirstName || 'Admin',
-          lastName: adminLastName || 'User',
-          enabled: true,
-          emailVerified: true,
-          requiredActions: [],
-          credentials: [
-            {
-              type: 'password',
-              value: adminPassword,
-              temporary: false,
-            },
-          ],
+          id: makerUserRecord.id,
+          roles: [{ id: makerRole.id, name: makerRole.name }],
         });
+        this.logger.log(
+          `Provisioned default maker user (${maker.email}) with 'maker' role in ${realmName}`,
+        );
+      }
 
-        const rolesToAssign: { id: string; name: string }[] = [];
-        for (const adminRoleName of ['Admin', 'admin']) {
-          const roleRecord = await this.kcAdminClient.roles.findOneByName({
-            realm: realmName,
-            name: adminRoleName,
-          });
-          if (roleRecord?.id && roleRecord?.name) {
-            rolesToAssign.push({ id: roleRecord.id, name: roleRecord.name });
-          }
-        }
+      // 5. Create default Checker user
+      const checkerUserRecord = await this.kcAdminClient.users.create({
+        realm: realmName,
+        username: checker.email,
+        email: checker.email,
+        firstName: checker.firstName || 'Checker',
+        lastName: checker.lastName || 'User',
+        enabled: true,
+        emailVerified: true,
+        requiredActions: [],
+        credentials: [
+          {
+            type: 'password',
+            value: checker.password,
+            temporary: false,
+          },
+        ],
+      });
 
-        if (rolesToAssign.length > 0) {
-          await this.kcAdminClient.users.addRealmRoleMappings({
-            realm: realmName,
-            id: user.id,
-            roles: rolesToAssign,
-          });
-          this.logger.log(
-            `Provisioned default admin user (${adminEmail}) with 'Admin' role in ${realmName}`,
-          );
-        }
+      const checkerRole = await this.kcAdminClient.roles.findOneByName({
+        realm: realmName,
+        name: 'checker',
+      });
+      if (checkerRole?.id && checkerRole?.name) {
+        await this.kcAdminClient.users.addRealmRoleMappings({
+          realm: realmName,
+          id: checkerUserRecord.id,
+          roles: [{ id: checkerRole.id, name: checkerRole.name }],
+        });
+        this.logger.log(
+          `Provisioned default checker user (${checker.email}) with 'checker' role in ${realmName}`,
+        );
       }
 
       const response: CreateTenantResponseDto = {
@@ -227,11 +244,24 @@ export class KeycloakService {
         tenantName,
         realm: realmName,
         clientId: targetClientId,
-        adminEmail: adminEmail || '',
-        ...(adminFirstName ? { adminFirstName } : {}),
-        ...(adminLastName ? { adminLastName } : {}),
+        maker: {
+          id: makerUserRecord.id,
+          email: maker.email,
+          username: maker.email,
+          ...(maker.firstName ? { firstName: maker.firstName } : {}),
+          ...(maker.lastName ? { lastName: maker.lastName } : {}),
+          roles: ['maker'],
+        },
+        checker: {
+          id: checkerUserRecord.id,
+          email: checker.email,
+          username: checker.email,
+          ...(checker.firstName ? { firstName: checker.firstName } : {}),
+          ...(checker.lastName ? { lastName: checker.lastName } : {}),
+          roles: ['checker'],
+        },
         enabled: true,
-        roles: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
+        roles: ['maker', 'checker', 'auditor', 'user'],
         ...(attributes?.industry ? { industry: attributes.industry } : {}),
         ...(attributes?.domainName
           ? { domainName: attributes.domainName }

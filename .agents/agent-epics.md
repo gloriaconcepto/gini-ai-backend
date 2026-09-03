@@ -41,9 +41,26 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Tenant API Key Lifecycle & Dual Auth Guard (Issue, list, revoke API keys; implement `ApiKeyAuthGuard` / Unified Auth Guard).
 - [x] Master Admin Tenant Controls & Exception Mapping (Enable/disable realm toggle, map Keycloak errors to NestJS HTTP exceptions).
 
+## Epic 1.11: Dual-Admin Tenant Provisioning & Admin Role Removal
+- [x] Remove `admin` and `Admin` roles from default governance role provisioning during tenant realm creation (retaining lowercase `maker`, `checker`, `auditor`, `user`).
+- [x] Update `CreateTenantDto` to accept credentials for both Maker (`makerEmail`, `makerPassword`, `makerFirstName`, `makerLastName`) and Checker (`checkerEmail`, `checkerPassword`, `checkerFirstName`, `checkerLastName`).
+- [x] Update `KeycloakService.provisionTenantRealm` to provision two distinct users (Maker assigned `maker` role, Checker assigned `checker` role) and remove `admin` role mapping.
+- [x] Update `CreateTenantResponseDto` to return dual-provisioned user metadata and exclude `admin` from default roles.
+- [x] Update unit tests in `keycloak.service.spec.ts` and `system.controller.spec.ts`.
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
-- [ ] Create `@RequireDualControl()` decorator.
-- [ ] Implement `MakerCheckerGuard` to enforce Maker != Checker logic on state-changing routes.
+- [ ] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).
+- [ ] Create `@RequireDualControl(actionType)` decorator to mark state-changing routes in `IamController`.
+- [ ] Implement `MakerCheckerInterceptor` / `MakerCheckerGuard`:
+  - When a user with the `maker` role initiates a dual-control action, intercept execution, store the action payload in the in-memory store, and return `202 Accepted` with the change request details.
+  - Reject attempts if the user lacks the `maker` role for dual-control routes.
+- [ ] Implement Tenant Governance Controller (`/iam/governance/requests`):
+  - `GET /iam/governance/requests`: List pending/historical change requests for the tenant.
+  - `GET /iam/governance/requests/:id`: View details and payload of a specific request.
+  - `POST /iam/governance/requests/:id/approve`: Approve and execute the underlying action against Keycloak; enforce `checker` role and invariant `checkerId !== makerId`.
+  - `POST /iam/governance/requests/:id/reject`: Reject the pending request with review comments.
+- [ ] Refactor `IamController` permissions: remove `@Roles('admin')` and replace with `@Roles('maker', 'checker')` (or role-specific permissions per endpoint).
+- [ ] Add unit and e2e tests covering maker submission, checker approval execution, checker rejection, and self-approval prevention (`checkerId === makerId`).
 
 ## Epic 3: Database & Tenant Isolation (Priority 2)
 - [ ] Configure Drizzle ORM to connect to the local `pgvector` instance.

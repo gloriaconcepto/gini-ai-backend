@@ -184,18 +184,30 @@ describe('KeycloakService', () => {
       mockRealmsCreate.mockResolvedValue(undefined);
       mockRolesCreate.mockResolvedValue(undefined);
       mockClientsCreate.mockResolvedValue(undefined);
-      mockUsersCreate.mockResolvedValue({ id: 'user-123' });
+      mockUsersCreate
+        .mockResolvedValueOnce({ id: 'maker-123' })
+        .mockResolvedValueOnce({ id: 'checker-456' });
       mockRolesFindOneByName.mockImplementation(({ name }: { name: string }) =>
         Promise.resolve({ id: `role-${name}-id`, name }),
       );
       mockUsersAddRealmRoleMappings.mockResolvedValue(undefined);
     });
 
-    it('should provision realm, default governance roles, frontend client, and return clean response payload', async () => {
+    it('should provision realm, lowercase governance roles (no admin), frontend client, and dual maker/checker users', async () => {
       const tenantId = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d';
       const tenantName = 'Acme Corp';
-      const adminEmail = 'admin@acme.com';
-      const adminPassword = 'securePassword123';
+      const maker = {
+        email: 'maker@acme.com',
+        password: 'securePassword123',
+        firstName: 'Alice',
+        lastName: 'Smith',
+      };
+      const checker = {
+        email: 'checker@acme.com',
+        password: 'securePassword456',
+        firstName: 'Bob',
+        lastName: 'Jones',
+      };
       const attributes = {
         industry: 'Finance',
         domainName: 'acme.com',
@@ -208,12 +220,10 @@ describe('KeycloakService', () => {
       const result = await service.provisionTenantRealm(
         tenantId,
         tenantName,
-        adminEmail,
-        adminPassword,
+        maker,
+        checker,
         attributes,
         'custom-frontend-client',
-        'Alice',
-        'Smith',
       );
 
       // Verify realm creation
@@ -228,15 +238,13 @@ describe('KeycloakService', () => {
         attributes,
       });
 
-      // Verify roles creation includes Maker, Checker, Auditor, User, Admin
+      // Verify roles creation strictly includes only lowercase maker, checker, auditor, user (no admin)
       const createdRoleNames = mockRolesCreate.mock.calls.map(
         (call: any[]) => call[0].name,
       );
-      expect(createdRoleNames).toContain('Maker');
-      expect(createdRoleNames).toContain('Checker');
-      expect(createdRoleNames).toContain('Auditor');
-      expect(createdRoleNames).toContain('User');
-      expect(createdRoleNames).toContain('Admin');
+      expect(createdRoleNames).toEqual(['maker', 'checker', 'auditor', 'user']);
+      expect(createdRoleNames).not.toContain('admin');
+      expect(createdRoleNames).not.toContain('Admin');
 
       // Verify client creation with custom client ID
       expect(mockClientsCreate).toHaveBeenCalledWith(
@@ -249,35 +257,68 @@ describe('KeycloakService', () => {
         }),
       );
 
-      // Verify default admin user creation & role mapping with custom first & last names
-      expect(mockUsersCreate).toHaveBeenCalledWith(
+      // Verify default Maker user creation & role mapping
+      expect(mockUsersCreate).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           realm: `tenant-${tenantId}`,
-          username: adminEmail,
-          email: adminEmail,
+          username: maker.email,
+          email: maker.email,
           firstName: 'Alice',
           lastName: 'Smith',
         }),
       );
       expect(mockUsersAddRealmRoleMappings).toHaveBeenCalledWith({
         realm: `tenant-${tenantId}`,
-        id: 'user-123',
+        id: 'maker-123',
         roles: expect.arrayContaining([
-          expect.objectContaining({ name: 'Admin' }),
+          expect.objectContaining({ name: 'maker' }),
         ]),
       });
 
-      // Verify clean response payload
+      // Verify default Checker user creation & role mapping
+      expect(mockUsersCreate).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          realm: `tenant-${tenantId}`,
+          username: checker.email,
+          email: checker.email,
+          firstName: 'Bob',
+          lastName: 'Jones',
+        }),
+      );
+      expect(mockUsersAddRealmRoleMappings).toHaveBeenCalledWith({
+        realm: `tenant-${tenantId}`,
+        id: 'checker-456',
+        roles: expect.arrayContaining([
+          expect.objectContaining({ name: 'checker' }),
+        ]),
+      });
+
+      // Verify clean response payload with dual users
       expect(result).toMatchObject({
         tenantId,
         tenantName,
         realm: `tenant-${tenantId}`,
         clientId: 'custom-frontend-client',
-        adminEmail,
-        adminFirstName: 'Alice',
-        adminLastName: 'Smith',
+        maker: {
+          id: 'maker-123',
+          email: maker.email,
+          username: maker.email,
+          firstName: 'Alice',
+          lastName: 'Smith',
+          roles: ['maker'],
+        },
+        checker: {
+          id: 'checker-456',
+          email: checker.email,
+          username: checker.email,
+          firstName: 'Bob',
+          lastName: 'Jones',
+          roles: ['checker'],
+        },
         enabled: true,
-        roles: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
+        roles: ['maker', 'checker', 'auditor', 'user'],
         industry: 'Finance',
         domainName: 'acme.com',
         subscriptionTier: 'Enterprise',
@@ -286,42 +327,68 @@ describe('KeycloakService', () => {
         contactPhone: '+1-555-0198',
       });
       expect(result.createdAt).toBeDefined();
-      expect((result as any).adminPassword).toBeUndefined();
     });
 
-    it('should fallback to default Admin and User when adminFirstName and adminLastName are omitted', async () => {
+    it('should fallback to default Maker/Checker and User when first and last names are omitted', async () => {
       const tenantId = 'tenant-id-defaults';
       const tenantName = 'Default User Corp';
-      const adminEmail = 'admin@defaults.com';
-      const adminPassword = 'securePassword123';
+      const maker = {
+        email: 'maker@defaults.com',
+        password: 'securePassword123',
+      };
+      const checker = {
+        email: 'checker@defaults.com',
+        password: 'securePassword456',
+      };
 
       const result = await service.provisionTenantRealm(
         tenantId,
         tenantName,
-        adminEmail,
-        adminPassword,
+        maker,
+        checker,
       );
 
-      expect(mockUsersCreate).toHaveBeenCalledWith(
+      expect(mockUsersCreate).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
           realm: `tenant-${tenantId}`,
-          username: adminEmail,
-          email: adminEmail,
-          firstName: 'Admin',
+          username: maker.email,
+          email: maker.email,
+          firstName: 'Maker',
           lastName: 'User',
         }),
       );
-      expect(result.adminFirstName).toBeUndefined();
-      expect(result.adminLastName).toBeUndefined();
+      expect(mockUsersCreate).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          realm: `tenant-${tenantId}`,
+          username: checker.email,
+          email: checker.email,
+          firstName: 'Checker',
+          lastName: 'User',
+        }),
+      );
+      expect(result.maker.firstName).toBeUndefined();
+      expect(result.checker.firstName).toBeUndefined();
     });
 
     it('should default client ID to gini-frontend when not provided', async () => {
       const tenantId = 'tenant-id-456';
       const tenantName = 'Default Corp';
+      const maker = {
+        email: 'maker@defaults.com',
+        password: 'securePassword123',
+      };
+      const checker = {
+        email: 'checker@defaults.com',
+        password: 'securePassword456',
+      };
 
       const result = await service.provisionTenantRealm(
         tenantId,
         tenantName,
+        maker,
+        checker,
       );
 
       expect(mockClientsCreate).toHaveBeenCalledWith(

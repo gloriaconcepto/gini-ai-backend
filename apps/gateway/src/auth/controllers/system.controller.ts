@@ -69,12 +69,20 @@ export class SystemController {
     const result = await this.keycloakService.provisionTenantRealm(
       tenantId,
       body.tenantName,
-      body.adminEmail,
-      body.adminPassword,
+      {
+        email: body.makerEmail,
+        password: body.makerPassword,
+        firstName: body.makerFirstName,
+        lastName: body.makerLastName,
+      },
+      {
+        email: body.checkerEmail,
+        password: body.checkerPassword,
+        firstName: body.checkerFirstName,
+        lastName: body.checkerLastName,
+      },
       attributes,
       body.clientId,
-      body.adminFirstName,
-      body.adminLastName,
     );
     res.header('X-Tenant-ID', tenantId);
     return result;
