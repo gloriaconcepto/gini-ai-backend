@@ -25,12 +25,16 @@ Update this file whenever the current phase, active feature, or implementation s
 - Adjusted tenant creation endpoint to provision frontend client, default governance roles (Maker, Checker, Auditor, User, Admin), and return clean frontend response DTO.
 - Enriched IAM `@Get('users/:userId')` response to include assigned user roles (`roles: string[]`) alongside user profile details with OpenAPI typing and test coverage.
 - Updated CreateTenantDto to accept admin first and last names, mapping them directly to Keycloak user attributes during tenant realm provisioning.
+- Completed Epic 1.11: Dual-Admin Tenant Provisioning & Admin Role Removal. Provisioned distinct Maker and Checker users, mapped to lowercase `maker` and `checker` governance roles, removed `admin` role from realm role creation and tenant provisioning, and updated OpenAPI contracts and unit tests.
 
 ## Active Tasks & Epics
 
+- **Epic 2:** Maker-Checker Governance (in-memory change request staging and Checker approval workflow for Tenant Admin actions).
 - Please refer to [agent-epics.md](./agent-epics.md) for the detailed, sequential list of implementation tasks and active epics.
 
 ## Architecture Decisions
 
 - **LLM Deferral:** GPU / vLLM deployment paused; infrastructure prepped via `snet-vllm-gpu`.
 - **Contract-First Parallelism:** Phase 1 must terminate with an exported OpenAPI spec before starting Phase 2 backend logic, allowing frontend agents to build independently.
+- **Admin Role Deprecation:** Tenant administration operates strictly via `maker` and `checker` governance roles rather than a single privileged `admin` role. Default role provisioning and tenant initialization create separate Maker and Checker accounts.
+- **In-Memory Dual Control:** Pending Maker state mutations are temporarily captured in-memory pending Checker approval until PostgreSQL persistence (Drizzle ORM) is introduced in Epic 3.

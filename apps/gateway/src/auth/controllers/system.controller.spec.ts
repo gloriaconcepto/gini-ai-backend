@@ -41,17 +41,30 @@ describe('SystemController', () => {
   });
 
   describe('createTenant()', () => {
-    it('should provision tenant realm, set X-Tenant-ID header, and return clean response payload', async () => {
+    it('should provision tenant realm, set X-Tenant-ID header, and return clean response payload with dual users', async () => {
       const mockResponseDto = {
         tenantId: 'uuid-1234',
         tenantName: 'Acme Corp',
         realm: 'tenant-uuid-1234',
         clientId: 'gini-frontend',
-        adminEmail: 'admin@acme.com',
-        adminFirstName: 'John',
-        adminLastName: 'Doe',
+        maker: {
+          id: 'maker-1234',
+          email: 'maker@acme.com',
+          username: 'maker@acme.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          roles: ['maker'],
+        },
+        checker: {
+          id: 'checker-5678',
+          email: 'checker@acme.com',
+          username: 'checker@acme.com',
+          firstName: 'Jane',
+          lastName: 'Smith',
+          roles: ['checker'],
+        },
         enabled: true,
-        roles: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
+        roles: ['maker', 'checker', 'auditor', 'user'],
         industry: 'FinTech',
         domainName: 'acme.com',
         subscriptionTier: 'Enterprise' as const,
@@ -67,10 +80,14 @@ describe('SystemController', () => {
 
       const body: CreateTenantDto = {
         tenantName: 'Acme Corp',
-        adminEmail: 'admin@acme.com',
-        adminPassword: 'SuperSecretPassword123!',
-        adminFirstName: 'John',
-        adminLastName: 'Doe',
+        makerEmail: 'maker@acme.com',
+        makerPassword: 'SuperSecretPassword123!',
+        makerFirstName: 'John',
+        makerLastName: 'Doe',
+        checkerEmail: 'checker@acme.com',
+        checkerPassword: 'SuperSecretPassword456!',
+        checkerFirstName: 'Jane',
+        checkerLastName: 'Smith',
         industry: 'FinTech',
         domainName: 'acme.com',
         subscriptionTier: 'Enterprise',
@@ -90,8 +107,18 @@ describe('SystemController', () => {
       expect(mockKeycloakService.provisionTenantRealm).toHaveBeenCalledWith(
         expect.any(String),
         body.tenantName,
-        body.adminEmail,
-        body.adminPassword,
+        {
+          email: body.makerEmail,
+          password: body.makerPassword,
+          firstName: body.makerFirstName,
+          lastName: body.makerLastName,
+        },
+        {
+          email: body.checkerEmail,
+          password: body.checkerPassword,
+          firstName: body.checkerFirstName,
+          lastName: body.checkerLastName,
+        },
         {
           industry: 'FinTech',
           domainName: 'acme.com',
@@ -101,8 +128,6 @@ describe('SystemController', () => {
           contactPhone: '+1-555-1234',
         },
         'gini-frontend',
-        'John',
-        'Doe',
       );
 
       expect(setHeaderMock).toHaveBeenCalledWith(
