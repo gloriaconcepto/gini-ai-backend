@@ -221,3 +221,61 @@ export class CreateApiKeyDto {
   @IsOptional()
   expiresInDays?: number;
 }
+
+export class IamUserResponseDto {
+  @ApiPropertyOptional({
+    example: 'a05c7585-7140-4cb5-8d96-9ee82e0e0bf2',
+    description: 'Unique user identifier in Keycloak',
+  })
+  id?: string;
+
+  @ApiPropertyOptional({
+    example: 'johndoe',
+    description: 'Username for the user',
+  })
+  username?: string;
+
+  @ApiPropertyOptional({
+    example: 'john@example.com',
+    description: 'Email address of the user',
+  })
+  email?: string;
+
+  @ApiPropertyOptional({
+    example: 'John',
+    description: 'First name of the user',
+  })
+  firstName?: string;
+
+  @ApiPropertyOptional({
+    example: 'Doe',
+    description: 'Last name of the user',
+  })
+  lastName?: string;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Whether the user account is enabled',
+  })
+  enabled?: boolean;
+
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Whether the user email is verified',
+  })
+  emailVerified?: boolean;
+
+  @ApiProperty({
+    example: ['admin', 'maker'],
+    description: 'Assigned realm roles for the user',
+    isArray: true,
+    type: String,
+  })
+  roles: string[];
+
+  @ApiPropertyOptional({
+    example: 1693750000000,
+    description: 'Timestamp when the user was created',
+  })
+  createdTimestamp?: number;
+}

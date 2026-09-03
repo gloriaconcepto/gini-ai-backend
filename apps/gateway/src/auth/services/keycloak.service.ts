@@ -30,7 +30,10 @@ export class KeycloakService {
         .getOrThrow<string>('KEYCLOAK_URL')
         .replace(/\/+$/, '')
         .trim(),
-      realmName: this.configService.get<string>('KEYCLOAK_ADMIN_REALM', 'master'),
+      realmName: this.configService.get<string>(
+        'KEYCLOAK_ADMIN_REALM',
+        'master',
+      ),
     });
   }
 
@@ -52,9 +55,14 @@ export class KeycloakService {
 
     try {
       // Workaround for @keycloak/keycloak-admin-client bug with client_credentials (it tries to decode an undefined refresh_token)
-      let baseUrl = this.configService.getOrThrow<string>('KEYCLOAK_URL').trim();
+      let baseUrl = this.configService
+        .getOrThrow<string>('KEYCLOAK_URL')
+        .trim();
       if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
-      const realmName = this.configService.get<string>('KEYCLOAK_ADMIN_REALM', 'master');
+      const realmName = this.configService.get<string>(
+        'KEYCLOAK_ADMIN_REALM',
+        'master',
+      );
       const tokenUrl = `${baseUrl}/realms/${realmName}/protocol/openid-connect/token`;
 
       const body = new URLSearchParams({
@@ -72,7 +80,7 @@ export class KeycloakService {
       if (!response.ok) {
         const errorBody = await response.text().catch(() => '');
         throw new Error(
-          `Keycloak token endpoint responded with status ${response.status}: ${errorBody}`,
+          `Keycloak token endpoint responded with status ${response.status}: ${errorBody || response.statusText}`,
         );
       }
 
@@ -231,9 +239,7 @@ export class KeycloakService {
         ...(attributes?.subscriptionTier
           ? {
               subscriptionTier: attributes.subscriptionTier as
-                | 'Basic'
-                | 'Pro'
-                | 'Enterprise',
+                'Basic' | 'Pro' | 'Enterprise',
             }
           : {}),
         ...(attributes?.taxId ? { taxId: attributes.taxId } : {}),
@@ -270,14 +276,41 @@ export class KeycloakService {
   async getUserById(tenantId: string, userId: string) {
     await this.authenticate();
     const realm = `tenant-${tenantId}`;
-    const user = await this.kcAdminClient.users.findOne({
-      realm,
-      id: userId,
-    });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+    try {
+      const [user, roleMappings] = await Promise.all([
+        this.kcAdminClient.users.findOne({
+          realm,
+          id: userId,
+        }),
+        this.kcAdminClient.users
+          .listRealmRoleMappings({
+            realm,
+            id: userId,
+          })
+          .catch(() => []),
+      ]);
+
+      if (!user) {
+        throw new NotFoundException(`User with ID ${userId} not found`);
+      }
+
+      const roles = Array.isArray(roleMappings)
+        ? roleMappings
+            .map((r) => r.name)
+            .filter(
+              (name): name is string =>
+                typeof name === 'string' && name.length > 0,
+            )
+        : [];
+
+      return {
+        ...user,
+        id: user.id ?? userId,
+        roles,
+      };
+    } catch (error) {
+      this.handleKeycloakError(error, `User with ID ${userId} not found`);
     }
-    return user;
   }
 
   async createUser(tenantId: string, dto: CreateIamUserDto) {
