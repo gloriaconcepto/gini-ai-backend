@@ -34,6 +34,22 @@ export class CreateTenantDto {
   @MinLength(8)
   adminPassword: string;
 
+  @ApiPropertyOptional({
+    description: 'The first name of the default tenant administrator',
+    example: 'John',
+  })
+  @IsString()
+  @IsOptional()
+  adminFirstName?: string;
+
+  @ApiPropertyOptional({
+    description: 'The last name of the default tenant administrator',
+    example: 'Doe',
+  })
+  @IsString()
+  @IsOptional()
+  adminLastName?: string;
+
   @ApiPropertyOptional({ example: 'Finance', description: 'Industry / Sector' })
   @IsString()
   @IsOptional()
@@ -119,6 +135,18 @@ export class CreateTenantResponseDto {
     description: 'Email address of the default tenant administrator',
   })
   adminEmail: string;
+
+  @ApiPropertyOptional({
+    example: 'John',
+    description: 'First name of the default tenant administrator',
+  })
+  adminFirstName?: string;
+
+  @ApiPropertyOptional({
+    example: 'Doe',
+    description: 'Last name of the default tenant administrator',
+  })
+  adminLastName?: string;
 
   @ApiProperty({
     example: true,

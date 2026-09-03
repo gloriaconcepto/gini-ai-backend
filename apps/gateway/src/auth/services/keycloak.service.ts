@@ -30,7 +30,10 @@ export class KeycloakService {
         .getOrThrow<string>('KEYCLOAK_URL')
         .replace(/\/+$/, '')
         .trim(),
-      realmName: this.configService.get<string>('KEYCLOAK_ADMIN_REALM', 'master'),
+      realmName: this.configService.get<string>(
+        'KEYCLOAK_ADMIN_REALM',
+        'master',
+      ),
     });
   }
 
@@ -52,9 +55,14 @@ export class KeycloakService {
 
     try {
       // Workaround for @keycloak/keycloak-admin-client bug with client_credentials (it tries to decode an undefined refresh_token)
-      let baseUrl = this.configService.getOrThrow<string>('KEYCLOAK_URL').trim();
+      let baseUrl = this.configService
+        .getOrThrow<string>('KEYCLOAK_URL')
+        .trim();
       if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
-      const realmName = this.configService.get<string>('KEYCLOAK_ADMIN_REALM', 'master');
+      const realmName = this.configService.get<string>(
+        'KEYCLOAK_ADMIN_REALM',
+        'master',
+      );
       const tokenUrl = `${baseUrl}/realms/${realmName}/protocol/openid-connect/token`;
 
       const body = new URLSearchParams({
@@ -94,6 +102,8 @@ export class KeycloakService {
     adminPassword?: string,
     attributes?: Record<string, string>,
     clientId?: string,
+    adminFirstName?: string,
+    adminLastName?: string,
   ): Promise<CreateTenantResponseDto> {
     try {
       await this.authenticate();
@@ -175,8 +185,8 @@ export class KeycloakService {
           realm: realmName,
           username: adminEmail,
           email: adminEmail,
-          firstName: 'Admin',
-          lastName: 'User',
+          firstName: adminFirstName || 'Admin',
+          lastName: adminLastName || 'User',
           enabled: true,
           emailVerified: true,
           requiredActions: [],
@@ -218,6 +228,8 @@ export class KeycloakService {
         realm: realmName,
         clientId: targetClientId,
         adminEmail: adminEmail || '',
+        ...(adminFirstName ? { adminFirstName } : {}),
+        ...(adminLastName ? { adminLastName } : {}),
         enabled: true,
         roles: ['Maker', 'Checker', 'Auditor', 'User', 'Admin'],
         ...(attributes?.industry ? { industry: attributes.industry } : {}),
@@ -227,9 +239,7 @@ export class KeycloakService {
         ...(attributes?.subscriptionTier
           ? {
               subscriptionTier: attributes.subscriptionTier as
-                | 'Basic'
-                | 'Pro'
-                | 'Enterprise',
+                'Basic' | 'Pro' | 'Enterprise',
             }
           : {}),
         ...(attributes?.taxId ? { taxId: attributes.taxId } : {}),
