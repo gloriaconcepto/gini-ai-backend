@@ -52,6 +52,12 @@ This document serves as the single source of truth for agents to understand the 
 ## Epic 1.12: Dual-Admin IAM 'admin' Role Assignment
 - [x] Add the 'admin' role to the 2 new admins (maker & checker) created during tenant onboarding, in order to give them the necessary permissions to create, read, update and delete new users, idps etc.
 
+## Epic 1.13: Tenant Workspace Details (Realm Representation) Retrieval
+- [x] Create `TenantWorkspaceResponseDto` defining the structured realm representation for workspace resolution.
+- [x] Implement `TenantController` with endpoint `GET /tenant/workspace` guarded by `JwtAuthGuard` (accessible to all tenant members: admins and regular users, explicitly rejecting OEM/master admins).
+- [x] Register `TenantController` in `AuthModule`.
+- [x] Add unit tests for `TenantController` covering tenant admin, regular user, OEM admin rejection, and not-found scenarios.
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).
 - [ ] Create `@RequireDualControl(actionType)` decorator to mark state-changing routes in `IamController`.
