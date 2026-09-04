@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SystemController } from './system.controller';
 import { KeycloakService } from '../services/keycloak.service';
+import { TenantDomainService } from '../services/tenant-domain.service';
 import { CreateTenantDto } from '../dto/create-tenant.dto';
 import type { Response } from 'express';
 
@@ -19,6 +20,10 @@ describe('SystemController', () => {
     deleteTenant: jest.fn(),
   };
 
+  const mockTenantDomainService = {
+    registerDomain: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -28,6 +33,10 @@ describe('SystemController', () => {
         {
           provide: KeycloakService,
           useValue: mockKeycloakService,
+        },
+        {
+          provide: TenantDomainService,
+          useValue: mockTenantDomainService,
         },
       ],
     }).compile();
@@ -133,6 +142,12 @@ describe('SystemController', () => {
       expect(setHeaderMock).toHaveBeenCalledWith(
         'X-Tenant-ID',
         expect.any(String),
+      );
+      expect(mockTenantDomainService.registerDomain).toHaveBeenCalledWith(
+        expect.any(String),
+        body.tenantName,
+        body.domainName,
+        'gini-frontend',
       );
       expect(result).toEqual(mockResponseDto);
     });

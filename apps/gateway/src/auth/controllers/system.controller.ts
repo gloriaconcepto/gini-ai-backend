@@ -18,6 +18,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 import { KeycloakService } from '../services/keycloak.service';
+import { TenantDomainService } from '../services/tenant-domain.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { MasterAdminGuard } from '../guards/master-admin.guard';
 import {
@@ -33,7 +34,10 @@ import type RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/r
 @UseGuards(JwtAuthGuard, MasterAdminGuard)
 @Controller('system/tenants')
 export class SystemController {
-  constructor(private readonly keycloakService: KeycloakService) {}
+  constructor(
+    private readonly keycloakService: KeycloakService,
+    private readonly tenantDomainService: TenantDomainService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Provision a new tenant realm and API keys' })
@@ -84,6 +88,16 @@ export class SystemController {
       attributes,
       body.clientId,
     );
+
+    if (body.domainName) {
+      this.tenantDomainService.registerDomain(
+        tenantId,
+        body.tenantName,
+        body.domainName,
+        body.clientId,
+      );
+    }
+
     res.header('X-Tenant-ID', tenantId);
     return result;
   }
