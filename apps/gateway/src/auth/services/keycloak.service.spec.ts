@@ -65,7 +65,8 @@ describe('KeycloakService', () => {
             }),
             getOrThrow: jest.fn((key: string) => {
               if (key === 'KEYCLOAK_URL') return 'http://localhost:8080';
-              if (key === 'KEYCLOAK_ADMIN_CLIENT_ID') return 'gini-gateway-service';
+              if (key === 'KEYCLOAK_ADMIN_CLIENT_ID')
+                return 'gini-gateway-service';
               if (key === 'KEYCLOAK_ADMIN_CLIENT_SECRET') return 'test-secret';
               throw new Error(`Configuration key "${key}" does not exist`);
             }),
@@ -114,9 +115,11 @@ describe('KeycloakService', () => {
     });
 
     it('should throw if KEYCLOAK_ADMIN_CLIENT_ID or SECRET is missing', async () => {
-      jest.spyOn(configService, 'getOrThrow').mockImplementation((key: string) => {
-        throw new Error(`Configuration key "${key}" does not exist`);
-      });
+      jest
+        .spyOn(configService, 'getOrThrow')
+        .mockImplementation((key: string) => {
+          throw new Error(`Configuration key "${key}" does not exist`);
+        });
 
       await expect(service.listAllTenants()).rejects.toThrow(
         'Configuration key "KEYCLOAK_ADMIN_CLIENT_ID" does not exist',
@@ -193,7 +196,7 @@ describe('KeycloakService', () => {
       mockUsersAddRealmRoleMappings.mockResolvedValue(undefined);
     });
 
-    it('should provision realm, lowercase governance roles (no admin), frontend client, and dual maker/checker users', async () => {
+    it('should provision realm, governance roles including admin, frontend client, and dual maker/checker users with admin roles', async () => {
       const tenantId = '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d';
       const tenantName = 'Acme Corp';
       const maker = {
@@ -238,13 +241,18 @@ describe('KeycloakService', () => {
         attributes,
       });
 
-      // Verify roles creation strictly includes only lowercase maker, checker, auditor, user (no admin)
+      // Verify roles creation includes maker, checker, auditor, user, admin
       const createdRoleNames = mockRolesCreate.mock.calls.map(
         (call: any[]) => call[0].name,
       );
-      expect(createdRoleNames).toEqual(['maker', 'checker', 'auditor', 'user']);
-      expect(createdRoleNames).not.toContain('admin');
-      expect(createdRoleNames).not.toContain('Admin');
+      expect(createdRoleNames).toEqual([
+        'maker',
+        'checker',
+        'auditor',
+        'user',
+        'admin',
+      ]);
+      expect(createdRoleNames).toContain('admin');
 
       // Verify client creation with custom client ID
       expect(mockClientsCreate).toHaveBeenCalledWith(
@@ -257,7 +265,7 @@ describe('KeycloakService', () => {
         }),
       );
 
-      // Verify default Maker user creation & role mapping
+      // Verify default Maker user creation & role mapping (maker + admin)
       expect(mockUsersCreate).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
@@ -273,10 +281,11 @@ describe('KeycloakService', () => {
         id: 'maker-123',
         roles: expect.arrayContaining([
           expect.objectContaining({ name: 'maker' }),
+          expect.objectContaining({ name: 'admin' }),
         ]),
       });
 
-      // Verify default Checker user creation & role mapping
+      // Verify default Checker user creation & role mapping (checker + admin)
       expect(mockUsersCreate).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
@@ -292,6 +301,7 @@ describe('KeycloakService', () => {
         id: 'checker-456',
         roles: expect.arrayContaining([
           expect.objectContaining({ name: 'checker' }),
+          expect.objectContaining({ name: 'admin' }),
         ]),
       });
 
@@ -307,7 +317,7 @@ describe('KeycloakService', () => {
           username: maker.email,
           firstName: 'Alice',
           lastName: 'Smith',
-          roles: ['maker'],
+          roles: ['maker', 'admin'],
         },
         checker: {
           id: 'checker-456',
@@ -315,10 +325,10 @@ describe('KeycloakService', () => {
           username: checker.email,
           firstName: 'Bob',
           lastName: 'Jones',
-          roles: ['checker'],
+          roles: ['checker', 'admin'],
         },
         enabled: true,
-        roles: ['maker', 'checker', 'auditor', 'user'],
+        roles: ['maker', 'checker', 'auditor', 'user', 'admin'],
         industry: 'Finance',
         domainName: 'acme.com',
         subscriptionTier: 'Enterprise',
@@ -498,4 +508,3 @@ describe('KeycloakService', () => {
     });
   });
 });
-

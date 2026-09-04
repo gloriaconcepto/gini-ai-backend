@@ -133,7 +133,7 @@ export class KeycloakService {
       // Refresh admin token so it contains the audience & permissions for the newly created realm
       await this.authenticate(true);
 
-      // 2. Pre-provision standard governance roles for Gini Platform (lowercase only, no admin)
+      // 2. Pre-provision standard governance roles for Gini Platform
       const standardRoles = [
         { name: 'maker', description: 'Maker Role - Dual Control Submitter' },
         {
@@ -145,6 +145,10 @@ export class KeycloakService {
           description: 'System Auditor - Read Only Compliance',
         },
         { name: 'user', description: 'Standard Tenant User' },
+        {
+          name: 'admin',
+          description: 'Tenant Administrator - Full IAM Management',
+        },
       ];
 
       for (const role of standardRoles) {
@@ -171,6 +175,12 @@ export class KeycloakService {
         },
       });
 
+      // Find common roles to assign
+      const adminRole = await this.kcAdminClient.roles.findOneByName({
+        realm: realmName,
+        name: 'admin',
+      });
+
       // 4. Create default Maker user
       const makerUserRecord = await this.kcAdminClient.users.create({
         realm: realmName,
@@ -194,14 +204,17 @@ export class KeycloakService {
         realm: realmName,
         name: 'maker',
       });
-      if (makerRole?.id && makerRole?.name) {
+      const makerRolesToAssign = [makerRole, adminRole].filter(
+        (r): r is { id: string; name: string } => Boolean(r?.id && r?.name),
+      );
+      if (makerRolesToAssign.length > 0) {
         await this.kcAdminClient.users.addRealmRoleMappings({
           realm: realmName,
           id: makerUserRecord.id,
-          roles: [{ id: makerRole.id, name: makerRole.name }],
+          roles: makerRolesToAssign.map((r) => ({ id: r.id, name: r.name })),
         });
         this.logger.log(
-          `Provisioned default maker user (${maker.email}) with 'maker' role in ${realmName}`,
+          `Provisioned default maker user (${maker.email}) with 'maker' and 'admin' roles in ${realmName}`,
         );
       }
 
@@ -228,14 +241,17 @@ export class KeycloakService {
         realm: realmName,
         name: 'checker',
       });
-      if (checkerRole?.id && checkerRole?.name) {
+      const checkerRolesToAssign = [checkerRole, adminRole].filter(
+        (r): r is { id: string; name: string } => Boolean(r?.id && r?.name),
+      );
+      if (checkerRolesToAssign.length > 0) {
         await this.kcAdminClient.users.addRealmRoleMappings({
           realm: realmName,
           id: checkerUserRecord.id,
-          roles: [{ id: checkerRole.id, name: checkerRole.name }],
+          roles: checkerRolesToAssign.map((r) => ({ id: r.id, name: r.name })),
         });
         this.logger.log(
-          `Provisioned default checker user (${checker.email}) with 'checker' role in ${realmName}`,
+          `Provisioned default checker user (${checker.email}) with 'checker' and 'admin' roles in ${realmName}`,
         );
       }
 
@@ -250,7 +266,7 @@ export class KeycloakService {
           username: maker.email,
           ...(maker.firstName ? { firstName: maker.firstName } : {}),
           ...(maker.lastName ? { lastName: maker.lastName } : {}),
-          roles: ['maker'],
+          roles: ['maker', 'admin'],
         },
         checker: {
           id: checkerUserRecord.id,
@@ -258,10 +274,10 @@ export class KeycloakService {
           username: checker.email,
           ...(checker.firstName ? { firstName: checker.firstName } : {}),
           ...(checker.lastName ? { lastName: checker.lastName } : {}),
-          roles: ['checker'],
+          roles: ['checker', 'admin'],
         },
         enabled: true,
-        roles: ['maker', 'checker', 'auditor', 'user'],
+        roles: ['maker', 'checker', 'auditor', 'user', 'admin'],
         ...(attributes?.industry ? { industry: attributes.industry } : {}),
         ...(attributes?.domainName
           ? { domainName: attributes.domainName }
