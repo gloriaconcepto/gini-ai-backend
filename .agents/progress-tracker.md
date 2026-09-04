@@ -27,6 +27,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - Updated CreateTenantDto to accept admin first and last names, mapping them directly to Keycloak user attributes during tenant realm provisioning.
 - Completed Epic 1.11: Dual-Admin Tenant Provisioning & Admin Role Removal. Provisioned distinct Maker and Checker users, mapped to lowercase `maker` and `checker` governance roles, removed `admin` role from realm role creation and tenant provisioning, and updated OpenAPI contracts and unit tests.
 - Completed Epic 1.12: Dual-Admin IAM 'admin' Role Assignment. Pre-provisioned `admin` role among tenant realm governance roles and assigned it to both Maker and Checker admin accounts during tenant onboarding, granting them full IAM permissions for user, IdP, and client management.
+- Completed Epic 1.13: Tenant Workspace Details (Realm Representation) Retrieval. Implemented `TenantController` (`GET /tenant/workspace`) guarded by `JwtAuthGuard` to automatically detect workspace context and return full realm representation for all tenant members (admins and regular users) while explicitly forbidding OEM / Master administrators.
 
 ## Active Tasks & Epics
 
@@ -38,4 +39,5 @@ Update this file whenever the current phase, active feature, or implementation s
 - **LLM Deferral:** GPU / vLLM deployment paused; infrastructure prepped via `snet-vllm-gpu`.
 - **Contract-First Parallelism:** Phase 1 must terminate with an exported OpenAPI spec before starting Phase 2 backend logic, allowing frontend agents to build independently.
 - **Dual-Admin IAM Admin Roles:** Tenant onboarding initializes separate Maker and Checker accounts, each assigned their respective governance role (`maker` or `checker`) as well as the `admin` role to provide full IAM access across tenant management endpoints prior to dual-control interception.
+- **Automatic Tenant Workspace Resolution:** Tenant applications resolve the current user's workspace via `GET /tenant/workspace`. The gateway extracts `tenantId` cryptographically from the active JWT issuer / custom claims and loads the realm representation directly from Keycloak, rejecting OEM master realm admins.
 - **In-Memory Dual Control:** Pending Maker state mutations are temporarily captured in-memory pending Checker approval until PostgreSQL persistence (Drizzle ORM) is introduced in Epic 3.
