@@ -58,6 +58,13 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Register `TenantController` in `AuthModule`.
 - [x] Add unit tests for `TenantController` covering tenant admin, regular user, OEM admin rejection, and not-found scenarios.
 
+## Epic 1.14: Tenant Domain Mapping & Pre-Login Auto-Resolution
+- [x] Create `TenantDomainMapping` entity and `TenantResolutionResponseDto` / `TenantResolutionQueryDto`.
+- [x] Implement `TenantDomainService` with domain normalization (handling domains and email addresses), in-memory mapping table, and Keycloak realm attribute fallback sync.
+- [x] Integrate auto-registration of domain mappings in `SystemController.createTenant` when a tenant is provisioned with `domainName`.
+- [x] Implement public auto-resolution endpoint `GET /tenant/resolve` in `TenantController` (`@Public()`).
+- [x] Add comprehensive unit tests in `tenant-domain.service.spec.ts`, `tenant.controller.spec.ts`, and `system.controller.spec.ts`.
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).
 - [ ] Create `@RequireDualControl(actionType)` decorator to mark state-changing routes in `IamController`.

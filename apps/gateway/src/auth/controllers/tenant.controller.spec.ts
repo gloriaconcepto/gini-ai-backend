@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { TenantController } from './tenant.controller';
 import { KeycloakService } from '../services/keycloak.service';
+import { TenantDomainService } from '../services/tenant-domain.service';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
 
 jest.mock('@keycloak/keycloak-admin-client', () => jest.fn());
@@ -11,10 +12,16 @@ describe('TenantController', () => {
   let mockKeycloakService: {
     getTenantDetails: jest.Mock;
   };
+  let mockTenantDomainService: {
+    resolveDomain: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockKeycloakService = {
       getTenantDetails: jest.fn(),
+    };
+    mockTenantDomainService = {
+      resolveDomain: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -23,6 +30,10 @@ describe('TenantController', () => {
         {
           provide: KeycloakService,
           useValue: mockKeycloakService,
+        },
+        {
+          provide: TenantDomainService,
+          useValue: mockTenantDomainService,
         },
       ],
     }).compile();
@@ -168,6 +179,39 @@ describe('TenantController', () => {
       await expect(controller.getWorkspace({ user } as any)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('resolveTenant()', () => {
+    it('should call tenantDomainService.resolveDomain with query.domain and return resolution data', async () => {
+      const mockResult = {
+        tenantId: 'resolved-tenant-id',
+        tenantName: 'Resolved Corp',
+        realm: 'tenant-resolved-tenant-id',
+        clientId: 'gini-frontend',
+        keycloakUrl:
+          'http://localhost:8080/realms/tenant-resolved-tenant-id',
+        loginTheme: 'gini-theme',
+      };
+
+      mockTenantDomainService.resolveDomain.mockResolvedValueOnce(mockResult);
+
+      const result = await controller.resolveTenant({ domain: 'acme.com' });
+
+      expect(mockTenantDomainService.resolveDomain).toHaveBeenCalledWith(
+        'acme.com',
+      );
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should propagate NotFoundException if domain is not found', async () => {
+      mockTenantDomainService.resolveDomain.mockRejectedValueOnce(
+        new NotFoundException("Tenant workspace for domain 'unknown.com' not found"),
+      );
+
+      await expect(
+        controller.resolveTenant({ domain: 'unknown.com' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

@@ -3,6 +3,7 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule } from '@nestjs/config';
 import { KeycloakService } from './services/keycloak.service';
 import { ApiKeyService } from './services/api-key.service';
+import { TenantDomainService } from './services/tenant-domain.service';
 import { IamController } from './controllers/iam.controller';
 import { SystemController } from './controllers/system.controller';
 import { ApiKeyController } from './controllers/api-key.controller';
@@ -12,13 +13,19 @@ import { ApiKeyGuard } from './guards/api-key.guard';
 
 @Module({
   imports: [PassportModule, ConfigModule],
-  providers: [KeycloakService, ApiKeyService, JwtStrategy, ApiKeyGuard],
+  providers: [
+    KeycloakService,
+    ApiKeyService,
+    TenantDomainService,
+    JwtStrategy,
+    ApiKeyGuard,
+  ],
   controllers: [
     IamController,
     SystemController,
     ApiKeyController,
     TenantController,
   ],
-  exports: [KeycloakService, ApiKeyService, ApiKeyGuard],
+  exports: [KeycloakService, ApiKeyService, TenantDomainService, ApiKeyGuard],
 })
 export class AuthModule {}

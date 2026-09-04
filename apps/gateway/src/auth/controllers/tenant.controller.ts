@@ -3,6 +3,7 @@ import {
   Get,
   UseGuards,
   Request,
+  Query,
   ForbiddenException,
 } from '@nestjs/common';
 import {
@@ -13,9 +14,15 @@ import {
 } from '@nestjs/swagger';
 import type { Request as ExpressRequest } from 'express';
 import { KeycloakService } from '../services/keycloak.service';
+import { TenantDomainService } from '../services/tenant-domain.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { Public } from '../decorators/public.decorator';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
 import { TenantWorkspaceResponseDto } from '../dto/tenant-workspace.dto';
+import {
+  TenantResolutionQueryDto,
+  TenantResolutionResponseDto,
+} from '../dto/tenant-resolution.dto';
 
 type AuthRequest = ExpressRequest & { user: AuthenticatedUser };
 
@@ -24,7 +31,32 @@ type AuthRequest = ExpressRequest & { user: AuthenticatedUser };
 @UseGuards(JwtAuthGuard)
 @Controller('tenant')
 export class TenantController {
-  constructor(private readonly keycloakService: KeycloakService) {}
+  constructor(
+    private readonly keycloakService: KeycloakService,
+    private readonly tenantDomainService: TenantDomainService,
+  ) {}
+
+  @Public()
+  @Get('resolve')
+  @ApiOperation({
+    summary:
+      'Auto-resolve tenant workspace and Keycloak realm from corporate domain or user email before login',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Tenant workspace connection details for pre-login Keycloak initialization.',
+    type: TenantResolutionResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No tenant workspace found for the specified domain or email.',
+  })
+  async resolveTenant(
+    @Query() query: TenantResolutionQueryDto,
+  ): Promise<TenantResolutionResponseDto> {
+    return this.tenantDomainService.resolveDomain(query.domain);
+  }
 
   @Get('workspace')
   @ApiOperation({
