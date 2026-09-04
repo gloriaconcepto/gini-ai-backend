@@ -6,6 +6,7 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Install `@keycloak/keycloak-admin-client` and NestJS Keycloak dependencies.
 - [x] Implement `KeycloakService` for dynamic tenant realm provisioning.
 - [x] Create Global Auth Guard to extract `tenant_id` from JWT.
+- [x] Add the 'admin' role to the 2 new admins (maker & checker) created during tenant onboarding, in order to give them the necessary permissions to create, read, update and delete new users, idps etc.
 
 ## Epic 1.5: Retroactive OpenAPI / Swagger Compliance
 - [x] Retroactively add Swagger decorators (`@ApiOperation`, `@ApiResponse`, etc.) to existing controllers.
@@ -47,6 +48,9 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Update `KeycloakService.provisionTenantRealm` to provision two distinct users (Maker assigned `maker` role, Checker assigned `checker` role) and remove `admin` role mapping.
 - [x] Update `CreateTenantResponseDto` to return dual-provisioned user metadata and exclude `admin` from default roles.
 - [x] Update unit tests in `keycloak.service.spec.ts` and `system.controller.spec.ts`.
+
+## Epic 1.12: Dual-Admin IAM 'admin' Role Assignment
+- [x] Add the 'admin' role to the 2 new admins (maker & checker) created during tenant onboarding, in order to give them the necessary permissions to create, read, update and delete new users, idps etc.
 
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).

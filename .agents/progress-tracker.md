@@ -26,6 +26,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - Enriched IAM `@Get('users/:userId')` response to include assigned user roles (`roles: string[]`) alongside user profile details with OpenAPI typing and test coverage.
 - Updated CreateTenantDto to accept admin first and last names, mapping them directly to Keycloak user attributes during tenant realm provisioning.
 - Completed Epic 1.11: Dual-Admin Tenant Provisioning & Admin Role Removal. Provisioned distinct Maker and Checker users, mapped to lowercase `maker` and `checker` governance roles, removed `admin` role from realm role creation and tenant provisioning, and updated OpenAPI contracts and unit tests.
+- Completed Epic 1.12: Dual-Admin IAM 'admin' Role Assignment. Pre-provisioned `admin` role among tenant realm governance roles and assigned it to both Maker and Checker admin accounts during tenant onboarding, granting them full IAM permissions for user, IdP, and client management.
 
 ## Active Tasks & Epics
 
@@ -36,5 +37,5 @@ Update this file whenever the current phase, active feature, or implementation s
 
 - **LLM Deferral:** GPU / vLLM deployment paused; infrastructure prepped via `snet-vllm-gpu`.
 - **Contract-First Parallelism:** Phase 1 must terminate with an exported OpenAPI spec before starting Phase 2 backend logic, allowing frontend agents to build independently.
-- **Admin Role Deprecation:** Tenant administration operates strictly via `maker` and `checker` governance roles rather than a single privileged `admin` role. Default role provisioning and tenant initialization create separate Maker and Checker accounts.
+- **Dual-Admin IAM Admin Roles:** Tenant onboarding initializes separate Maker and Checker accounts, each assigned their respective governance role (`maker` or `checker`) as well as the `admin` role to provide full IAM access across tenant management endpoints prior to dual-control interception.
 - **In-Memory Dual Control:** Pending Maker state mutations are temporarily captured in-memory pending Checker approval until PostgreSQL persistence (Drizzle ORM) is introduced in Epic 3.

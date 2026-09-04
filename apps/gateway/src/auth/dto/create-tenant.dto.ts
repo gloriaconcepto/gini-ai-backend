@@ -40,7 +40,7 @@ export class TenantProvisionedUserDto {
   lastName?: string;
 
   @ApiProperty({
-    example: ['maker'],
+    example: ['maker', 'admin'],
     description: 'Assigned governance roles for the user',
     isArray: true,
     type: String,
@@ -222,7 +222,7 @@ export class CreateTenantResponseDto {
   enabled: boolean;
 
   @ApiProperty({
-    example: ['maker', 'checker', 'auditor', 'user'],
+    example: ['maker', 'checker', 'auditor', 'user', 'admin'],
     description: 'Default governance roles provisioned for the tenant',
     isArray: true,
     type: String,
@@ -274,4 +274,3 @@ export class CreateTenantResponseDto {
 }
 
 export { CreateTenantResponseDto as TenantResponseDto };
-
