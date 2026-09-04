@@ -6,9 +6,25 @@ import { GatewayModule } from './gateway.module';
 async function bootstrap() {
   const app = await NestFactory.create(GatewayModule);
 
+  // Increase max HTTP header size on underlying HTTP server (default 16KB -> 64KB)
+  const server = app.getHttpServer();
+  server.maxHeaderSize = 65536;
+
   // Enable CORS
   app.enableCors({
+    origin: true,
+    credentials: true,
     exposedHeaders: ['X-Tenant-ID'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'X-Tenant-ID',
+      'x-api-key',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   // Enable global validation pipe for class-validator
