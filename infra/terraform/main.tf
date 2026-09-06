@@ -346,28 +346,14 @@ resource "azurerm_container_app" "gateway" {
 # -----------------------------------------------------------------------------
 locals {
   frontend_apps = {
-    "manager-app" = {
+    "enterprise-portal" = {
       target_port  = 80
-      cpu          = 0.25
-      memory       = "0.5Gi"
+      cpu          = 0.5
+      memory       = "1.0Gi"
       min_replicas = 1
       max_replicas = 3
     }
     "oem-backoffice" = {
-      target_port  = 80
-      cpu          = 0.25
-      memory       = "0.5Gi"
-      min_replicas = 1
-      max_replicas = 3
-    }
-    "tenant-admin" = {
-      target_port  = 80
-      cpu          = 0.25
-      memory       = "0.5Gi"
-      min_replicas = 1
-      max_replicas = 3
-    }
-    "user-app" = {
       target_port  = 80
       cpu          = 0.25
       memory       = "0.5Gi"

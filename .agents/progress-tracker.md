@@ -29,6 +29,7 @@ Update this file whenever the current phase, active feature, or implementation s
 - Completed Epic 1.12: Dual-Admin IAM 'admin' Role Assignment. Pre-provisioned `admin` role among tenant realm governance roles and assigned it to both Maker and Checker admin accounts during tenant onboarding, granting them full IAM permissions for user, IdP, and client management.
 - Completed Epic 1.13: Tenant Workspace Details (Realm Representation) Retrieval. Implemented `TenantController` (`GET /tenant/workspace`) guarded by `JwtAuthGuard` to automatically detect workspace context and return full realm representation for all tenant members (admins and regular users) while explicitly forbidding OEM / Master administrators.
 - Completed Epic 1.14: Tenant Domain Mapping & Pre-Login Auto-Resolution. Implemented `TenantDomainService` and public endpoint `GET /tenant/resolve` allowing frontend applications to resolve `domain` or `email` into the tenant's `tenantId`, Keycloak realm, and client configuration before authentication. Automatically registered during tenant provisioning.
+- Completed Infrastructure Restructuring for Frontend Consolidation: Updated Terraform ACA frontend configuration to provision `ca-enterprise-portal` and `ca-oem-backoffice`, updated outputs, added root `.dockerignore`, expanded gateway deployment workflow triggers, and configured `@gini/oem-backoffice` Keycloak master client.
 
 ## Active Tasks & Epics
 

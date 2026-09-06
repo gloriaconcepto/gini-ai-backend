@@ -56,22 +56,12 @@ output "frontend_urls" {
   description = "External HTTPS URLs for all frontend Container Apps."
 }
 
-output "manager_app_url" {
-  value       = "https://${azurerm_container_app.frontend["manager-app"].ingress[0].fqdn}"
-  description = "External HTTPS URL for the Manager App frontend."
+output "enterprise_portal_url" {
+  value       = "https://${azurerm_container_app.frontend["enterprise-portal"].ingress[0].fqdn}"
+  description = "External HTTPS URL for the Enterprise Portal frontend."
 }
 
 output "oem_backoffice_url" {
   value       = "https://${azurerm_container_app.frontend["oem-backoffice"].ingress[0].fqdn}"
   description = "External HTTPS URL for the OEM Backoffice frontend."
-}
-
-output "tenant_admin_url" {
-  value       = "https://${azurerm_container_app.frontend["tenant-admin"].ingress[0].fqdn}"
-  description = "External HTTPS URL for the Tenant Admin frontend."
-}
-
-output "user_app_url" {
-  value       = "https://${azurerm_container_app.frontend["user-app"].ingress[0].fqdn}"
-  description = "External HTTPS URL for the User App frontend."
 }
