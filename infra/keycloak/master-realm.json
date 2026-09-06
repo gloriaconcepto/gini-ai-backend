@@ -26,6 +26,30 @@
       "publicClient": false,
       "protocol": "openid-connect",
       "fullScopeAllowed": true
+    },
+    {
+      "clientId": "@gini/oem-backoffice",
+      "name": "Gini AI OEM Backoffice SPA",
+      "description": "Public SPA client for OEM Backoffice platform management",
+      "rootUrl": "http://localhost:3002",
+      "baseUrl": "http://localhost:3002",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "redirectUris": [
+        "http://localhost:3002/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3002",
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3002/*##+"
+      }
     }
   ],
   "users": [

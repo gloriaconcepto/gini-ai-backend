@@ -7,8 +7,16 @@ on:
       - development
     paths:
       - 'apps/gateway/**'
+      - 'libs/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
       - '.github/workflows/deploy-gateway.yml'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   CONTAINER_APP_NAME: 'ca-gateway-dev'
