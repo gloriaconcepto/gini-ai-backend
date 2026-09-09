@@ -215,7 +215,7 @@ resource "azurerm_container_app" "keycloak" {
   }
 
   template {
-    min_replicas = 1
+    min_replicas = var.enable_scale_to_zero ? 0 : 1
     max_replicas = 1
     container {
       name   = "keycloak"
@@ -306,7 +306,7 @@ resource "azurerm_container_app" "gateway" {
   }
 
   template {
-    min_replicas = 1
+    min_replicas = var.enable_scale_to_zero ? 0 : 1
     max_replicas = 5
     container {
       name = "api-gateway"
@@ -350,14 +350,14 @@ locals {
       target_port  = 80
       cpu          = 0.5
       memory       = "1.0Gi"
-      min_replicas = 1
+      min_replicas = var.enable_scale_to_zero ? 0 : 1
       max_replicas = 3
     }
     "oem-backoffice" = {
       target_port  = 80
       cpu          = 0.25
       memory       = "0.5Gi"
-      min_replicas = 1
+      min_replicas = var.enable_scale_to_zero ? 0 : 1
       max_replicas = 3
     }
   }

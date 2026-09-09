@@ -20,7 +20,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./apps/gateway/test/jest-e2e.json",
-    "keycloak:bootstrap": "bash scripts/bootstrap-keycloak.sh"
+    "keycloak:bootstrap": "bash scripts/bootstrap-keycloak.sh",
+    "azure:status": "bash scripts/azure-power.sh status",
+    "azure:stop": "bash scripts/azure-power.sh stop",
+    "azure:start": "bash scripts/azure-power.sh start"
   },
   "dependencies": {
     "@keycloak/keycloak-admin-client": "^26.7.2",
