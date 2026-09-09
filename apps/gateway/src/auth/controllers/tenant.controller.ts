@@ -114,10 +114,7 @@ export class TenantController {
       industry: getAttributeValue('industry'),
       domainName: getAttributeValue('domainName'),
       subscriptionTier: getAttributeValue('subscriptionTier') as
-        | 'Basic'
-        | 'Pro'
-        | 'Enterprise'
-        | undefined,
+        'Basic' | 'Pro' | 'Enterprise' | undefined,
       taxId: getAttributeValue('taxId'),
       billingAddress: getAttributeValue('billingAddress'),
       contactPhone: getAttributeValue('contactPhone'),

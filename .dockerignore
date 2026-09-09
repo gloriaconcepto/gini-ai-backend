@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+*/node_modules
+*/*/node_modules
+
+# Build outputs
+dist
+*/dist
+dist_keycloak
+coverage
+
+# Environment files
+.env
+.env.local
+.env.remote
+.env.*
+!.env.example
+
+# Git and CI/CD
+.git
+.github
+
+# Documentation & IDE
+.agents
+.vscode
+.idea
+.DS_Store
+
+# Terraform
+.terraform
+**/.terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Logs
+logs
+*.log
+npm-debug.log*

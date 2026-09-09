@@ -189,8 +189,7 @@ describe('TenantController', () => {
         tenantName: 'Resolved Corp',
         realm: 'tenant-resolved-tenant-id',
         clientId: 'gini-frontend',
-        keycloakUrl:
-          'http://localhost:8080/realms/tenant-resolved-tenant-id',
+        keycloakUrl: 'http://localhost:8080/realms/tenant-resolved-tenant-id',
         loginTheme: 'gini-theme',
       };
 
@@ -206,7 +205,9 @@ describe('TenantController', () => {
 
     it('should propagate NotFoundException if domain is not found', async () => {
       mockTenantDomainService.resolveDomain.mockRejectedValueOnce(
-        new NotFoundException("Tenant workspace for domain 'unknown.com' not found"),
+        new NotFoundException(
+          "Tenant workspace for domain 'unknown.com' not found",
+        ),
       );
 
       await expect(

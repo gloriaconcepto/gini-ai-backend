@@ -66,18 +66,18 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Add comprehensive unit tests in `tenant-domain.service.spec.ts`, `tenant.controller.spec.ts`, and `system.controller.spec.ts`.
 
 ## Epic 2: Maker-Checker Governance (Priority 1)
-- [ ] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).
-- [ ] Create `@RequireDualControl(actionType)` decorator to mark state-changing routes in `IamController`.
-- [ ] Implement `MakerCheckerInterceptor` / `MakerCheckerGuard`:
+- [x] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).
+- [x] Create `@RequireDualControl(actionType)` decorator to mark state-changing routes in `IamController`.
+- [x] Implement `MakerCheckerInterceptor` / `MakerCheckerGuard`:
   - When a user with the `maker` role initiates a dual-control action, intercept execution, store the action payload in the in-memory store, and return `202 Accepted` with the change request details.
   - Reject attempts if the user lacks the `maker` role for dual-control routes.
-- [ ] Implement Tenant Governance Controller (`/iam/governance/requests`):
+- [x] Implement Tenant Governance Controller (`/iam/governance/requests`):
   - `GET /iam/governance/requests`: List pending/historical change requests for the tenant.
   - `GET /iam/governance/requests/:id`: View details and payload of a specific request.
   - `POST /iam/governance/requests/:id/approve`: Approve and execute the underlying action against Keycloak; enforce `checker` role and invariant `checkerId !== makerId`.
   - `POST /iam/governance/requests/:id/reject`: Reject the pending request with review comments.
-- [ ] Refactor `IamController` permissions: remove `@Roles('admin')` and replace with `@Roles('maker', 'checker')` (or role-specific permissions per endpoint).
-- [ ] Add unit and e2e tests covering maker submission, checker approval execution, checker rejection, and self-approval prevention (`checkerId === makerId`).
+- [x] Refactor `IamController` permissions: remove `@Roles('admin')` and replace with `@Roles('maker', 'checker')` (or role-specific permissions per endpoint).
+- [x] Add unit and e2e tests covering maker submission, checker approval execution, checker rejection, and self-approval prevention (`checkerId === makerId`).
 
 ## Epic 3: Database & Tenant Isolation (Priority 2)
 - [ ] Configure Drizzle ORM to connect to the local `pgvector` instance.
