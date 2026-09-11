@@ -31,10 +31,11 @@ Update this file whenever the current phase, active feature, or implementation s
 - Completed Epic 1.14: Tenant Domain Mapping & Pre-Login Auto-Resolution. Implemented `TenantDomainService` and public endpoint `GET /tenant/resolve` allowing frontend applications to resolve `domain` or `email` into the tenant's `tenantId`, Keycloak realm, and client configuration before authentication. Automatically registered during tenant provisioning.
 - Completed Infrastructure Restructuring for Frontend Consolidation: Updated Terraform ACA frontend configuration to provision `ca-enterprise-portal` and `ca-oem-backoffice`, updated outputs, added root `.dockerignore`, expanded gateway deployment workflow triggers, and configured `@gini/oem-backoffice` Keycloak master client.
 - Completed Infrastructure Cost Reduction & Environment Power Management: Added `enable_scale_to_zero` Terraform variable to scale HTTP Container Apps (`gateway`, `keycloak`, `enterprise-portal`, `oem-backoffice`) to 0 replicas on idle; created `./scripts/azure-power.sh` with `status`, `stop`, and `start` commands; added npm scripts (`azure:status`, `azure:stop`, `azure:start`); and added `.github/workflows/azure-scheduled-power.yml` for automated off-hours shutdown.
+- Completed Epic 2: Maker-Checker Governance. Built in-memory `ChangeRequestStoreService`, `@RequireDualControl` decorator, `MakerCheckerInterceptor` (short-circuiting mutations to `202 Accepted`), `ChangeRequestExecutorService` (action dispatcher against Keycloak), `GovernanceController` (`/iam/governance/requests` with dual-control approval, rejection, and maker self-approval prevention), refactored `IamController` permissions to `@Roles('maker', 'checker', 'admin')` with `@Roles('maker')` on mutations, with 100% unit test coverage and clean OpenAPI decorations.
 
 ## Active Tasks & Epics
 
-- **Epic 2:** Maker-Checker Governance (in-memory change request staging and Checker approval workflow for Tenant Admin actions).
+- **Epic 3:** Database & Tenant Isolation (Priority 2: Drizzle ORM pgvector connection, RLS enforcement, Audit Command Centre schema, and Auditor regex masking).
 - Please refer to [agent-epics.md](./agent-epics.md) for the detailed, sequential list of implementation tasks and active epics.
 
 ## Architecture Decisions
