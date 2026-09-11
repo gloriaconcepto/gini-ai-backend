@@ -38,7 +38,8 @@ export class TenantResolutionResponseDto {
   clientId: string;
 
   @ApiProperty({
-    example: 'http://localhost:8080/realms/tenant-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
+    example:
+      'http://localhost:8080/realms/tenant-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
     description: 'Keycloak issuer URL for OIDC discovery',
   })
   keycloakUrl: string;
