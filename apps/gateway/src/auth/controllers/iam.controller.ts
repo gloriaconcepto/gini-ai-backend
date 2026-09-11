@@ -35,6 +35,8 @@ import {
   UpdateIdpDto,
   IamUserResponseDto,
 } from '../dto/iam.dtos';
+import { Audited } from '../../audit/decorators/audited.decorator';
+import { AuditActionCategory } from '../../audit/audit.types';
 
 @ApiTags('Tenant IAM')
 @ApiBearerAuth()
@@ -75,6 +77,11 @@ export class IamController {
   }
 
   @Post('users')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'CREATE_USER',
+    resourceType: 'user',
+  })
   @ApiOperation({ summary: 'Create a new user in the tenant realm' })
   async createUser(@Request() req: AuthRequest, @Body() dto: CreateIamUserDto) {
     const tenantId = req.user.tenantId!;
@@ -82,6 +89,11 @@ export class IamController {
   }
 
   @Patch('users/:userId')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'UPDATE_USER',
+    resourceType: 'user',
+  })
   @ApiOperation({
     summary: 'Update profile and status of a user in the tenant realm',
   })
@@ -95,6 +107,11 @@ export class IamController {
   }
 
   @Delete('users/:userId')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'DELETE_USER',
+    resourceType: 'user',
+  })
   @ApiOperation({ summary: 'Delete a user from the tenant realm' })
   async deleteUser(
     @Request() req: AuthRequest,
@@ -105,6 +122,11 @@ export class IamController {
   }
 
   @Put('users/:userId/reset-password')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'RESET_PASSWORD',
+    resourceType: 'user',
+  })
   @ApiOperation({ summary: 'Reset a user password by tenant administrator' })
   async resetPassword(
     @Request() req: AuthRequest,
@@ -197,6 +219,11 @@ export class IamController {
   }
 
   @Get('clients/:id/secret')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'VIEW_CLIENT_SECRET',
+    resourceType: 'client',
+  })
   @ApiOperation({
     summary: 'Retrieve credentials/client-secret for a confidential client',
   })

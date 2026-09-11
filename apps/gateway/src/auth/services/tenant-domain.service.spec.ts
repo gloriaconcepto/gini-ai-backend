@@ -20,10 +20,12 @@ describe('TenantDomainService', () => {
       listAllTenants: jest.fn(),
     };
     mockConfigService = {
-      get: jest.fn().mockImplementation((key: string, defaultValue?: string) => {
-        if (key === 'KEYCLOAK_URL') return 'http://localhost:8080';
-        return defaultValue;
-      }),
+      get: jest
+        .fn()
+        .mockImplementation((key: string, defaultValue?: string) => {
+          if (key === 'KEYCLOAK_URL') return 'http://localhost:8080';
+          return defaultValue;
+        }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -55,7 +57,9 @@ describe('TenantDomainService', () => {
       expect(service.normalizeDomain('https://portal.acme.com/login')).toBe(
         'portal.acme.com',
       );
-      expect(service.normalizeDomain('http://acme.com:3000/app')).toBe('acme.com');
+      expect(service.normalizeDomain('http://acme.com:3000/app')).toBe(
+        'acme.com',
+      );
       expect(service.normalizeDomain('')).toBe('');
     });
   });
@@ -120,13 +124,15 @@ describe('TenantDomainService', () => {
     it('should throw NotFoundException if domain does not exist in table or Keycloak', async () => {
       mockKeycloakService.listAllTenants.mockResolvedValueOnce([]);
 
-      await expect(service.resolveDomain('unknown-company.com')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.resolveDomain('unknown-company.com'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException if empty domain is provided', async () => {
-      await expect(service.resolveDomain('')).rejects.toThrow(NotFoundException);
+      await expect(service.resolveDomain('')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

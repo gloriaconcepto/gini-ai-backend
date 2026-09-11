@@ -65,6 +65,17 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Implement public auto-resolution endpoint `GET /tenant/resolve` in `TenantController` (`@Public()`).
 - [x] Add comprehensive unit tests in `tenant-domain.service.spec.ts`, `tenant.controller.spec.ts`, and `system.controller.spec.ts`.
 
+## Epic 1.15: Comprehensive Audit Log Module & Auditor Role Enforcement
+- [x] Create domain types and storage interfaces (`AuditActionCategory`, `AuditStatus`, `AuditActor`, `AuditLogEntry`, `IAuditStorageAdapter`).
+- [x] Implement `AuditMaskingService` for recursive key-based and regex-based sanitization of credentials, secrets, tokens, credit cards, and PII.
+- [x] Implement `InMemoryAuditStorageAdapter` with bounded FIFO eviction, multi-tenant isolation, date filtering, pagination, and summary metrics calculation.
+- [x] Implement `AuditService` for fail-safe asynchronous log persistence, querying, metrics aggregation, and CSV/JSON export.
+- [x] Implement `@Audited()` and `@SkipAudit()` decorators and `AuditLogInterceptor` for automatic capture of mutating HTTP actions and route-specific metadata.
+- [x] Implement `AuditorGuard` enforcing strict read-only access (`GET`/`HEAD`) for users with the `auditor` role.
+- [x] Implement `AuditController` with OpenAPI-decorated endpoints (`GET /audit/logs`, `GET /audit/logs/:id`, `GET /audit/summary`, `GET /audit/export`).
+- [x] Wire `AuditModule` into `GatewayModule` as global interceptor (`APP_INTERCEPTOR`).
+- [x] Add exhaustive unit tests across services, interceptors, adapters, guards, and controllers with >=90% test coverage.
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [ ] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).
 - [ ] Create `@RequireDualControl(actionType)` decorator to mark state-changing routes in `IamController`.
