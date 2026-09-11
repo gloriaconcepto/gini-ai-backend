@@ -26,6 +26,8 @@ import {
   CreateTenantResponseDto,
 } from '../dto/create-tenant.dto';
 import { TenantStatusDto } from '../dto/iam.dtos';
+import { Audited } from '../../audit/decorators/audited.decorator';
+import { AuditActionCategory } from '../../audit/audit.types';
 
 import type RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
 
@@ -40,6 +42,11 @@ export class SystemController {
   ) {}
 
   @Post()
+  @Audited({
+    category: AuditActionCategory.SYSTEM,
+    operation: 'PROVISION_TENANT',
+    resourceType: 'tenant',
+  })
   @ApiOperation({ summary: 'Provision a new tenant realm and API keys' })
   @ApiResponse({
     status: 201,
@@ -115,6 +122,11 @@ export class SystemController {
   }
 
   @Patch(':id')
+  @Audited({
+    category: AuditActionCategory.SYSTEM,
+    operation: 'UPDATE_TENANT_METADATA',
+    resourceType: 'tenant',
+  })
   @ApiOperation({ summary: 'Update metadata for a specific tenant realm' })
   async updateTenant(
     @Param('id') id: string,
@@ -124,6 +136,11 @@ export class SystemController {
   }
 
   @Patch(':id/status')
+  @Audited({
+    category: AuditActionCategory.SYSTEM,
+    operation: 'SET_TENANT_STATUS',
+    resourceType: 'tenant',
+  })
   @ApiOperation({ summary: 'Enable or disable a tenant realm' })
   async setTenantStatus(
     @Param('id') id: string,
@@ -133,6 +150,11 @@ export class SystemController {
   }
 
   @Delete(':id')
+  @Audited({
+    category: AuditActionCategory.SYSTEM,
+    operation: 'DELETE_TENANT',
+    resourceType: 'tenant',
+  })
   @ApiOperation({ summary: 'Delete a tenant realm entirely' })
   async deleteTenant(@Param('id') id: string) {
     return this.keycloakService.deleteTenant(id);
