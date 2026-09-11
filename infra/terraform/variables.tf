@@ -39,3 +39,9 @@ variable "keycloak_admin_client_secret" {
   sensitive   = true
   description = "Keycloak confidential client secret for Gateway administrative access."
 }
+
+variable "enable_scale_to_zero" {
+  type        = bool
+  default     = true
+  description = "Whether to allow container apps to scale down to 0 replicas when idle (cost-saving for dev/staging)."
+}

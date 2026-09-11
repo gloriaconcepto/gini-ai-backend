@@ -8,6 +8,7 @@ import {
   Body,
   Param,
   UseGuards,
+  UseInterceptors,
   Request,
 } from '@nestjs/common';
 import {
@@ -20,6 +21,8 @@ import { KeycloakService } from '../services/keycloak.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 import { Roles } from '../decorators/roles.decorator';
+import { RequireDualControl } from '../decorators/require-dual-control.decorator';
+import { MakerCheckerInterceptor } from '../interceptors/maker-checker.interceptor';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
 import type { Request as ExpressRequest } from 'express';
 
@@ -37,11 +40,13 @@ import {
 } from '../dto/iam.dtos';
 import { Audited } from '../../audit/decorators/audited.decorator';
 import { AuditActionCategory } from '../../audit/audit.types';
+import { ChangeRequestResponseDto } from '../dto/governance.dtos';
 
 @ApiTags('Tenant IAM')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
+@UseInterceptors(MakerCheckerInterceptor)
+@Roles('maker', 'checker', 'admin')
 @Controller('iam')
 export class IamController {
   constructor(private readonly keycloakService: KeycloakService) {}
@@ -82,7 +87,14 @@ export class IamController {
     operation: 'CREATE_USER',
     resourceType: 'user',
   })
+  @Roles('maker')
+  @RequireDualControl('CREATE_USER')
   @ApiOperation({ summary: 'Create a new user in the tenant realm' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async createUser(@Request() req: AuthRequest, @Body() dto: CreateIamUserDto) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.createUser(tenantId, dto);
@@ -94,8 +106,15 @@ export class IamController {
     operation: 'UPDATE_USER',
     resourceType: 'user',
   })
+  @Roles('maker')
+  @RequireDualControl('UPDATE_USER')
   @ApiOperation({
     summary: 'Update profile and status of a user in the tenant realm',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
   })
   async updateUser(
     @Request() req: AuthRequest,
@@ -112,7 +131,14 @@ export class IamController {
     operation: 'DELETE_USER',
     resourceType: 'user',
   })
+  @Roles('maker')
+  @RequireDualControl('DELETE_USER')
   @ApiOperation({ summary: 'Delete a user from the tenant realm' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async deleteUser(
     @Request() req: AuthRequest,
     @Param('userId') userId: string,
@@ -127,7 +153,14 @@ export class IamController {
     operation: 'RESET_PASSWORD',
     resourceType: 'user',
   })
+  @Roles('maker')
+  @RequireDualControl('RESET_PASSWORD')
   @ApiOperation({ summary: 'Reset a user password by tenant administrator' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async resetPassword(
     @Request() req: AuthRequest,
     @Param('userId') userId: string,
@@ -148,7 +181,14 @@ export class IamController {
   }
 
   @Post('users/:userId/roles')
+  @Roles('maker')
+  @RequireDualControl('ASSIGN_ROLE')
   @ApiOperation({ summary: 'Assign a role to a user' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async assignRole(
     @Request() req: AuthRequest,
     @Param('userId') userId: string,
@@ -163,7 +203,14 @@ export class IamController {
   }
 
   @Delete('users/:userId/roles/:roleName')
+  @Roles('maker')
+  @RequireDualControl('REMOVE_ROLE')
   @ApiOperation({ summary: 'Remove an assigned role from a user' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async removeRoleFromUser(
     @Request() req: AuthRequest,
     @Param('userId') userId: string,
@@ -183,14 +230,28 @@ export class IamController {
   }
 
   @Post('roles')
+  @Roles('maker')
+  @RequireDualControl('CREATE_ROLE')
   @ApiOperation({ summary: 'Create a new custom role in the tenant realm' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async createRole(@Request() req: AuthRequest, @Body() dto: CreateIamRoleDto) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.createRole(tenantId, dto);
   }
 
   @Delete('roles/:roleName')
+  @Roles('maker')
+  @RequireDualControl('DELETE_ROLE')
   @ApiOperation({ summary: 'Delete a custom role from the tenant realm' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async deleteRole(
     @Request() req: AuthRequest,
     @Param('roleName') roleName: string,
@@ -209,7 +270,14 @@ export class IamController {
   }
 
   @Post('clients')
+  @Roles('maker')
+  @RequireDualControl('CREATE_CLIENT')
   @ApiOperation({ summary: 'Register a new OAuth/OIDC client' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async createClient(
     @Request() req: AuthRequest,
     @Body() dto: CreateIamClientDto,
@@ -233,8 +301,15 @@ export class IamController {
   }
 
   @Delete('clients/:id')
+  @Roles('maker')
+  @RequireDualControl('DELETE_CLIENT')
   @ApiOperation({
     summary: 'Delete an OAuth/OIDC client from the tenant realm',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
   })
   async deleteClient(@Request() req: AuthRequest, @Param('id') id: string) {
     const tenantId = req.user.tenantId!;
@@ -253,15 +328,29 @@ export class IamController {
   }
 
   @Post('idp')
+  @Roles('maker')
+  @RequireDualControl('CREATE_IDP')
   @ApiOperation({ summary: 'Register a 3rd-party Identity Provider' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
   async createIdp(@Request() req: AuthRequest, @Body() dto: CreateIdpDto) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.createIdentityProvider(tenantId, dto);
   }
 
   @Patch('idp/:alias')
+  @Roles('maker')
+  @RequireDualControl('UPDATE_IDP')
   @ApiOperation({
     summary: 'Update a 3rd-party Identity Provider configuration',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
   })
   async updateIdp(
     @Request() req: AuthRequest,
@@ -273,8 +362,15 @@ export class IamController {
   }
 
   @Delete('idp/:alias')
+  @Roles('maker')
+  @RequireDualControl('DELETE_IDP')
   @ApiOperation({
     summary: 'Delete a 3rd-party Identity Provider from the tenant realm',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
   })
   async deleteIdp(@Request() req: AuthRequest, @Param('alias') alias: string) {
     const tenantId = req.user.tenantId!;
