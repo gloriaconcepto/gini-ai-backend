@@ -76,6 +76,39 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Wire `AuditModule` into `GatewayModule` as global interceptor (`APP_INTERCEPTOR`).
 - [x] Add exhaustive unit tests across services, interceptors, adapters, guards, and controllers with >=90% test coverage.
 
+## Epic 1.16: 3rd-Party IdP Role, Group & Corporate Hierarchy Synchronization
+- [x] Group & Hierarchy Management in `KeycloakService`:
+  - CRUD operations for Keycloak Groups and sub-groups to represent corporate hierarchy.
+  - Group realm role mappings and attribute metadata assignment.
+  - User-group membership operations (add, list, remove).
+- [x] Expose Tenant IAM Group Endpoints in `IamController`:
+  - `GET /iam/groups`: List group hierarchy tree.
+  - `GET /iam/groups/:groupId`: Retrieve specific group details with roles & attributes.
+  - `POST /iam/groups`: Create root group (guarded by `@RequireDualControl('CREATE_GROUP')`).
+  - `POST /iam/groups/:groupId/children`: Create subgroup under parent (guarded by `@RequireDualControl('CREATE_SUBGROUP')`).
+  - `PATCH /iam/groups/:groupId`: Update group metadata and attributes (guarded by `@RequireDualControl('UPDATE_GROUP')`).
+  - `DELETE /iam/groups/:groupId`: Delete group (guarded by `@RequireDualControl('DELETE_GROUP')`).
+  - `POST /iam/groups/:groupId/roles`: Map realm role to group (guarded by `@RequireDualControl('ASSIGN_GROUP_ROLE')`).
+  - `DELETE /iam/groups/:groupId/roles/:roleName`: Remove role from group (guarded by `@RequireDualControl('REMOVE_GROUP_ROLE')`).
+  - `GET /iam/groups/:groupId/members`: List members of a group.
+  - `GET /iam/users/:userId/groups`: List user's assigned groups.
+  - `POST /iam/users/:userId/groups/:groupId`: Add user to group (guarded by `@RequireDualControl('ADD_USER_TO_GROUP')`).
+  - `DELETE /iam/users/:userId/groups/:groupId`: Remove user from group (guarded by `@RequireDualControl('REMOVE_USER_FROM_GROUP')`).
+- [x] Identity Provider Mapper Infrastructure in `KeycloakService`:
+  - Endpoints and methods to configure Keycloak IdP Mappers (`kcAdminClient.identityProviders.*Mapper*`) on configured 3rd-party IdPs.
+  - Support mapping external role claims to internal realm roles (`oidc-role-idp-mapper`, `saml-role-idp-mapper`).
+  - Support mapping external group claims to Keycloak hierarchical groups (`oidc-group-idp-mapper`).
+  - Support mapping user corporate metadata (title, department, manager, employee ID) to Keycloak user attributes (`oidc-user-attribute-idp-mapper`).
+  - `GET /iam/idp/:alias/mappers`: List configured mappers for an IdP.
+  - `POST /iam/idp/:alias/mappers`: Register claim mapper (guarded by `@RequireDualControl('CREATE_IDP_MAPPER')`).
+  - `DELETE /iam/idp/:alias/mappers/:mapperId`: Delete claim mapper (guarded by `@RequireDualControl('DELETE_IDP_MAPPER')`).
+- [x] IdP Discovery & Catalog Hierarchy Sync Service (Option A Hybrid Engine):
+  - Support direct directory import payload (standard enterprise roles, group trees, and role bindings).
+  - Support native IdP directory query sync where provider directory credentials exist.
+  - `POST /iam/idp/:alias/sync`: Trigger full organizational sync (guarded by `@RequireDualControl('SYNC_IDP_HIERARCHY')`).
+- [x] Update `ChangeRequestExecutorService` to execute all new group, mapper, and sync actions upon checker approval.
+- [x] Comprehensive unit tests across services, controllers, executor, and governance interceptors.
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [x] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).
 - [x] Create `@RequireDualControl(actionType)` decorator to mark state-changing routes in `IamController`.

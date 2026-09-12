@@ -38,6 +38,19 @@ import {
   UpdateIdpDto,
   IamUserResponseDto,
 } from '../dto/iam.dtos';
+import {
+  CreateIamGroupDto,
+  CreateIamSubgroupDto,
+  UpdateIamGroupDto,
+  AssignGroupRoleDto,
+  IamGroupResponseDto,
+} from '../dto/iam-group.dtos';
+import {
+  CreateIdpMapperDto,
+  IdpMapperResponseDto,
+  SyncIdpHierarchyDto,
+  SyncHierarchyResultDto,
+} from '../dto/iam-idp-mapper.dtos';
 import { Audited } from '../../audit/decorators/audited.decorator';
 import { AuditActionCategory } from '../../audit/audit.types';
 import { ChangeRequestResponseDto } from '../dto/governance.dtos';
@@ -375,5 +388,352 @@ export class IamController {
   async deleteIdp(@Request() req: AuthRequest, @Param('alias') alias: string) {
     const tenantId = req.user.tenantId!;
     return this.keycloakService.deleteIdentityProvider(tenantId, alias);
+  }
+
+  // --- Groups & Corporate Hierarchy ---
+
+  @Get('groups')
+  @ApiOperation({
+    summary: 'List all groups and organizational hierarchy tree',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Group hierarchy tree with attributes and role mappings',
+    type: [IamGroupResponseDto],
+  })
+  async getGroups(@Request() req: AuthRequest): Promise<IamGroupResponseDto[]> {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.listGroups(tenantId);
+  }
+
+  @Get('groups/:groupId')
+  @ApiOperation({ summary: 'Get details of a specific corporate group' })
+  @ApiResponse({
+    status: 200,
+    description: 'Group representation including roles and subgroups',
+    type: IamGroupResponseDto,
+  })
+  async getGroup(
+    @Request() req: AuthRequest,
+    @Param('groupId') groupId: string,
+  ): Promise<IamGroupResponseDto> {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.getGroupById(tenantId, groupId);
+  }
+
+  @Post('groups')
+  @Roles('maker')
+  @RequireDualControl('CREATE_GROUP')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'CREATE_GROUP',
+    resourceType: 'iam_group',
+  })
+  @ApiOperation({ summary: 'Create a top-level group / corporate department' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async createGroup(
+    @Request() req: AuthRequest,
+    @Body() dto: CreateIamGroupDto,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.createGroup(tenantId, dto);
+  }
+
+  @Post('groups/:groupId/children')
+  @Roles('maker')
+  @RequireDualControl('CREATE_SUBGROUP')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'CREATE_SUBGROUP',
+    resourceType: 'iam_group',
+  })
+  @ApiOperation({
+    summary: 'Create a child subgroup under a parent department',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async createSubGroup(
+    @Request() req: AuthRequest,
+    @Param('groupId') groupId: string,
+    @Body() dto: CreateIamSubgroupDto,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.createSubGroup(tenantId, groupId, dto);
+  }
+
+  @Patch('groups/:groupId')
+  @Roles('maker')
+  @RequireDualControl('UPDATE_GROUP')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'UPDATE_GROUP',
+    resourceType: 'iam_group',
+  })
+  @ApiOperation({ summary: 'Update group metadata and corporate attributes' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async updateGroup(
+    @Request() req: AuthRequest,
+    @Param('groupId') groupId: string,
+    @Body() dto: UpdateIamGroupDto,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.updateGroup(tenantId, groupId, dto);
+  }
+
+  @Delete('groups/:groupId')
+  @Roles('maker')
+  @RequireDualControl('DELETE_GROUP')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'DELETE_GROUP',
+    resourceType: 'iam_group',
+  })
+  @ApiOperation({ summary: 'Delete a group and its nested subgroups' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async deleteGroup(
+    @Request() req: AuthRequest,
+    @Param('groupId') groupId: string,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.deleteGroup(tenantId, groupId);
+  }
+
+  @Post('groups/:groupId/roles')
+  @Roles('maker')
+  @RequireDualControl('ASSIGN_GROUP_ROLE')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'ASSIGN_GROUP_ROLE',
+    resourceType: 'iam_group',
+  })
+  @ApiOperation({ summary: 'Map a realm role to a group' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async assignRoleToGroup(
+    @Request() req: AuthRequest,
+    @Param('groupId') groupId: string,
+    @Body() dto: AssignGroupRoleDto,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.assignRoleToGroup(
+      tenantId,
+      groupId,
+      dto.roleName,
+    );
+  }
+
+  @Delete('groups/:groupId/roles/:roleName')
+  @Roles('maker')
+  @RequireDualControl('REMOVE_GROUP_ROLE')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'REMOVE_GROUP_ROLE',
+    resourceType: 'iam_group',
+  })
+  @ApiOperation({ summary: 'Remove a realm role from a group' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async removeRoleFromGroup(
+    @Request() req: AuthRequest,
+    @Param('groupId') groupId: string,
+    @Param('roleName') roleName: string,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.removeRoleFromGroup(
+      tenantId,
+      groupId,
+      roleName,
+    );
+  }
+
+  @Get('groups/:groupId/members')
+  @ApiOperation({ summary: 'List all members belonging to a group' })
+  async listGroupMembers(
+    @Request() req: AuthRequest,
+    @Param('groupId') groupId: string,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.listGroupMembers(tenantId, groupId);
+  }
+
+  // --- User Group Memberships ---
+
+  @Get('users/:userId/groups')
+  @ApiOperation({ summary: 'List all groups assigned to a user' })
+  async getUserGroups(
+    @Request() req: AuthRequest,
+    @Param('userId') userId: string,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.getUserGroups(tenantId, userId);
+  }
+
+  @Post('users/:userId/groups/:groupId')
+  @Roles('maker')
+  @RequireDualControl('ADD_USER_TO_GROUP')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'ADD_USER_TO_GROUP',
+    resourceType: 'iam_user_group',
+  })
+  @ApiOperation({ summary: 'Add a user to a corporate group' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async addUserToGroup(
+    @Request() req: AuthRequest,
+    @Param('userId') userId: string,
+    @Param('groupId') groupId: string,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.addUserToGroup(tenantId, userId, groupId);
+  }
+
+  @Delete('users/:userId/groups/:groupId')
+  @Roles('maker')
+  @RequireDualControl('REMOVE_USER_FROM_GROUP')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'REMOVE_USER_FROM_GROUP',
+    resourceType: 'iam_user_group',
+  })
+  @ApiOperation({ summary: 'Remove a user from a corporate group' })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async removeUserFromGroup(
+    @Request() req: AuthRequest,
+    @Param('userId') userId: string,
+    @Param('groupId') groupId: string,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.removeUserFromGroup(tenantId, userId, groupId);
+  }
+
+  // --- Identity Provider Mappers ---
+
+  @Get('idp/:alias/mappers')
+  @ApiOperation({
+    summary: 'List all mappers configured on a 3rd-party Identity Provider',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of claim/role/group mappers for the IdP',
+    type: [IdpMapperResponseDto],
+  })
+  async listIdpMappers(
+    @Request() req: AuthRequest,
+    @Param('alias') alias: string,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.listIdpMappers(tenantId, alias);
+  }
+
+  @Post('idp/:alias/mappers')
+  @Roles('maker')
+  @RequireDualControl('CREATE_IDP_MAPPER')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'CREATE_IDP_MAPPER',
+    resourceType: 'iam_idp_mapper',
+  })
+  @ApiOperation({
+    summary: 'Register an IdP claim mapper (roles, groups, or user attributes)',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async createIdpMapper(
+    @Request() req: AuthRequest,
+    @Param('alias') alias: string,
+    @Body() dto: CreateIdpMapperDto,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.createIdpMapper(tenantId, alias, dto);
+  }
+
+  @Delete('idp/:alias/mappers/:mapperId')
+  @Roles('maker')
+  @RequireDualControl('DELETE_IDP_MAPPER')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'DELETE_IDP_MAPPER',
+    resourceType: 'iam_idp_mapper',
+  })
+  @ApiOperation({
+    summary: 'Delete a claim mapper from a 3rd-party Identity Provider',
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async deleteIdpMapper(
+    @Request() req: AuthRequest,
+    @Param('alias') alias: string,
+    @Param('mapperId') mapperId: string,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.deleteIdpMapper(tenantId, alias, mapperId);
+  }
+
+  // --- Corporate Hierarchy & IdP Catalog Synchronization ---
+
+  @Post('idp/:alias/sync')
+  @Roles('maker')
+  @RequireDualControl('SYNC_IDP_HIERARCHY')
+  @Audited({
+    category: AuditActionCategory.IAM,
+    operation: 'SYNC_IDP_HIERARCHY',
+    resourceType: 'iam_idp_sync',
+  })
+  @ApiOperation({
+    summary:
+      'Synchronize corporate roles, group hierarchy, and metadata from 3rd-party IdP',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Direct result of synchronized corporate hierarchy',
+    type: SyncHierarchyResultDto,
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Change request submitted for dual-control checker approval',
+    type: ChangeRequestResponseDto,
+  })
+  async syncIdpHierarchy(
+    @Request() req: AuthRequest,
+    @Param('alias') alias: string,
+    @Body() dto?: SyncIdpHierarchyDto,
+  ) {
+    const tenantId = req.user.tenantId!;
+    return this.keycloakService.syncIdpHierarchy(tenantId, alias, dto);
   }
 }

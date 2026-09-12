@@ -26,6 +26,17 @@ describe('ChangeRequestExecutorService', () => {
     createIdentityProvider: jest.fn(),
     updateIdentityProvider: jest.fn(),
     deleteIdentityProvider: jest.fn(),
+    createGroup: jest.fn(),
+    createSubGroup: jest.fn(),
+    updateGroup: jest.fn(),
+    deleteGroup: jest.fn(),
+    assignRoleToGroup: jest.fn(),
+    removeRoleFromGroup: jest.fn(),
+    addUserToGroup: jest.fn(),
+    removeUserFromGroup: jest.fn(),
+    createIdpMapper: jest.fn(),
+    deleteIdpMapper: jest.fn(),
+    syncIdpHierarchy: jest.fn(),
   };
 
   beforeEach(() => {
@@ -310,6 +321,261 @@ describe('ChangeRequestExecutorService', () => {
 
   it('should throw BadRequestException on DELETE_IDP if alias is missing', async () => {
     const req = baseRequest('DELETE_IDP', { params: {} });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute CREATE_GROUP', async () => {
+    mockKeycloakService.createGroup.mockResolvedValueOnce({ id: 'grp-1' });
+    const req = baseRequest('CREATE_GROUP', {
+      body: { name: 'Engineering', attributes: { dept: ['ENG'] } },
+    });
+
+    const res = await service.execute(req);
+    expect(mockKeycloakService.createGroup).toHaveBeenCalledWith('tenant-1', {
+      name: 'Engineering',
+      attributes: { dept: ['ENG'] },
+    });
+    expect(res).toEqual({ id: 'grp-1' });
+  });
+
+  it('should execute CREATE_SUBGROUP', async () => {
+    mockKeycloakService.createSubGroup.mockResolvedValueOnce({ id: 'sub-1' });
+    const req = baseRequest(
+      'CREATE_SUBGROUP',
+      { body: { name: 'DevOps' }, params: { groupId: 'grp-1' } },
+      'grp-1',
+    );
+
+    const res = await service.execute(req);
+    expect(mockKeycloakService.createSubGroup).toHaveBeenCalledWith(
+      'tenant-1',
+      'grp-1',
+      { name: 'DevOps' },
+    );
+    expect(res).toEqual({ id: 'sub-1' });
+  });
+
+  it('should throw BadRequestException on CREATE_SUBGROUP if groupId is missing', async () => {
+    const req = baseRequest('CREATE_SUBGROUP', { body: { name: 'DevOps' } });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute UPDATE_GROUP', async () => {
+    mockKeycloakService.updateGroup.mockResolvedValueOnce({ success: true });
+    const req = baseRequest(
+      'UPDATE_GROUP',
+      { body: { name: 'New Name' }, params: { groupId: 'grp-1' } },
+      'grp-1',
+    );
+
+    await service.execute(req);
+    expect(mockKeycloakService.updateGroup).toHaveBeenCalledWith(
+      'tenant-1',
+      'grp-1',
+      { name: 'New Name' },
+    );
+  });
+
+  it('should throw BadRequestException on UPDATE_GROUP if groupId is missing', async () => {
+    const req = baseRequest('UPDATE_GROUP', { body: { name: 'New Name' } });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute DELETE_GROUP', async () => {
+    mockKeycloakService.deleteGroup.mockResolvedValueOnce({ success: true });
+    const req = baseRequest(
+      'DELETE_GROUP',
+      { params: { groupId: 'grp-1' } },
+      'grp-1',
+    );
+
+    await service.execute(req);
+    expect(mockKeycloakService.deleteGroup).toHaveBeenCalledWith(
+      'tenant-1',
+      'grp-1',
+    );
+  });
+
+  it('should throw BadRequestException on DELETE_GROUP if groupId is missing', async () => {
+    const req = baseRequest('DELETE_GROUP', { params: {} });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute ASSIGN_GROUP_ROLE', async () => {
+    mockKeycloakService.assignRoleToGroup.mockResolvedValueOnce({
+      success: true,
+    });
+    const req = baseRequest(
+      'ASSIGN_GROUP_ROLE',
+      { body: { roleName: 'maker' }, params: { groupId: 'grp-1' } },
+      'grp-1',
+    );
+
+    await service.execute(req);
+    expect(mockKeycloakService.assignRoleToGroup).toHaveBeenCalledWith(
+      'tenant-1',
+      'grp-1',
+      'maker',
+    );
+  });
+
+  it('should throw BadRequestException on ASSIGN_GROUP_ROLE if groupId or roleName is missing', async () => {
+    const req = baseRequest('ASSIGN_GROUP_ROLE', { body: {} });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute REMOVE_GROUP_ROLE', async () => {
+    mockKeycloakService.removeRoleFromGroup.mockResolvedValueOnce({
+      success: true,
+    });
+    const req = baseRequest(
+      'REMOVE_GROUP_ROLE',
+      { params: { groupId: 'grp-1', roleName: 'maker' } },
+      'grp-1',
+    );
+
+    await service.execute(req);
+    expect(mockKeycloakService.removeRoleFromGroup).toHaveBeenCalledWith(
+      'tenant-1',
+      'grp-1',
+      'maker',
+    );
+  });
+
+  it('should throw BadRequestException on REMOVE_GROUP_ROLE if params are missing', async () => {
+    const req = baseRequest('REMOVE_GROUP_ROLE', { params: {} });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute ADD_USER_TO_GROUP', async () => {
+    mockKeycloakService.addUserToGroup.mockResolvedValueOnce({ success: true });
+    const req = baseRequest(
+      'ADD_USER_TO_GROUP',
+      { params: { userId: 'u-1', groupId: 'g-1' } },
+      'u-1',
+    );
+
+    await service.execute(req);
+    expect(mockKeycloakService.addUserToGroup).toHaveBeenCalledWith(
+      'tenant-1',
+      'u-1',
+      'g-1',
+    );
+  });
+
+  it('should throw BadRequestException on ADD_USER_TO_GROUP if userId or groupId is missing', async () => {
+    const req = baseRequest('ADD_USER_TO_GROUP', { params: {} });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute REMOVE_USER_FROM_GROUP', async () => {
+    mockKeycloakService.removeUserFromGroup.mockResolvedValueOnce({
+      success: true,
+    });
+    const req = baseRequest(
+      'REMOVE_USER_FROM_GROUP',
+      { params: { userId: 'u-1', groupId: 'g-1' } },
+      'u-1',
+    );
+
+    await service.execute(req);
+    expect(mockKeycloakService.removeUserFromGroup).toHaveBeenCalledWith(
+      'tenant-1',
+      'u-1',
+      'g-1',
+    );
+  });
+
+  it('should throw BadRequestException on REMOVE_USER_FROM_GROUP if userId or groupId is missing', async () => {
+    const req = baseRequest('REMOVE_USER_FROM_GROUP', { params: {} });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute CREATE_IDP_MAPPER', async () => {
+    mockKeycloakService.createIdpMapper.mockResolvedValueOnce({ id: 'map-1' });
+    const req = baseRequest('CREATE_IDP_MAPPER', {
+      params: { alias: 'azure-ad' },
+      body: {
+        name: 'Mapper',
+        identityProviderMapper: 'oidc-role-idp-mapper',
+        config: {},
+      },
+    });
+
+    const res = await service.execute(req);
+    expect(mockKeycloakService.createIdpMapper).toHaveBeenCalledWith(
+      'tenant-1',
+      'azure-ad',
+      {
+        name: 'Mapper',
+        identityProviderMapper: 'oidc-role-idp-mapper',
+        config: {},
+      },
+    );
+    expect(res).toEqual({ id: 'map-1' });
+  });
+
+  it('should throw BadRequestException on CREATE_IDP_MAPPER if alias is missing', async () => {
+    const req = baseRequest('CREATE_IDP_MAPPER', { body: {} });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute DELETE_IDP_MAPPER', async () => {
+    mockKeycloakService.deleteIdpMapper.mockResolvedValueOnce({ id: 'map-1' });
+    const req = baseRequest(
+      'DELETE_IDP_MAPPER',
+      { params: { alias: 'azure-ad', mapperId: 'map-1' } },
+      'map-1',
+    );
+
+    const res = await service.execute(req);
+    expect(mockKeycloakService.deleteIdpMapper).toHaveBeenCalledWith(
+      'tenant-1',
+      'azure-ad',
+      'map-1',
+    );
+    expect(res).toEqual({ id: 'map-1' });
+  });
+
+  it('should throw BadRequestException on DELETE_IDP_MAPPER if params are missing', async () => {
+    const req = baseRequest('DELETE_IDP_MAPPER', { params: {} });
+    await expect(service.execute(req)).rejects.toThrow(BadRequestException);
+  });
+
+  it('should execute SYNC_IDP_HIERARCHY', async () => {
+    mockKeycloakService.syncIdpHierarchy.mockResolvedValueOnce({
+      rolesCreated: 1,
+      groupsCreated: 1,
+      subgroupsCreated: 0,
+      roleMappingsCreated: 0,
+      details: ['Created role: lead'],
+    });
+    const req = baseRequest(
+      'SYNC_IDP_HIERARCHY',
+      {
+        params: { alias: 'azure-ad' },
+        body: { roles: [{ name: 'lead' }] },
+      },
+      'azure-ad',
+    );
+
+    const res = await service.execute(req);
+    expect(mockKeycloakService.syncIdpHierarchy).toHaveBeenCalledWith(
+      'tenant-1',
+      'azure-ad',
+      { roles: [{ name: 'lead' }] },
+    );
+    expect(res).toEqual({
+      rolesCreated: 1,
+      groupsCreated: 1,
+      subgroupsCreated: 0,
+      roleMappingsCreated: 0,
+      details: ['Created role: lead'],
+    });
+  });
+
+  it('should throw BadRequestException on SYNC_IDP_HIERARCHY if alias is missing', async () => {
+    const req = baseRequest('SYNC_IDP_HIERARCHY', { body: {} });
     await expect(service.execute(req)).rejects.toThrow(BadRequestException);
   });
 

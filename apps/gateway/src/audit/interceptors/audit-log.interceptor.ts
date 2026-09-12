@@ -77,7 +77,8 @@ export class AuditLogInterceptor implements NestInterceptor {
     const category = this.resolveCategory(auditOptions, request.path);
     const routeObj = request.route as { path?: string } | undefined;
     const routePath = routeObj?.path || request.path;
-    const operation = auditOptions?.operation || `${request.method}_${routePath}`;
+    const operation =
+      auditOptions?.operation || `${request.method}_${routePath}`;
     const resourceType =
       auditOptions?.resourceType || this.inferResourceType(request.path);
     const resourceId = auditOptions?.extractResourceId
@@ -109,7 +110,7 @@ export class AuditLogInterceptor implements NestInterceptor {
               : undefined,
           metadata: {
             queryParams: Object.keys(request.query || {}).length
-              ? (request.query as Record<string, unknown>)
+              ? request.query
               : undefined,
             responseSummary:
               responseData && typeof responseData === 'object'
@@ -120,7 +121,11 @@ export class AuditLogInterceptor implements NestInterceptor {
       }),
       catchError((error: unknown) => {
         const durationMs = Date.now() - startTime;
-        const errObj = error as { status?: number; statusCode?: number; message?: string };
+        const errObj = error as {
+          status?: number;
+          statusCode?: number;
+          message?: string;
+        };
         const statusCode = errObj.status || errObj.statusCode || 500;
         const status =
           statusCode === 401 || statusCode === 403
@@ -148,7 +153,7 @@ export class AuditLogInterceptor implements NestInterceptor {
           errorMessage,
           metadata: {
             queryParams: Object.keys(request.query || {}).length
-              ? (request.query as Record<string, unknown>)
+              ? request.query
               : undefined,
           },
         });
