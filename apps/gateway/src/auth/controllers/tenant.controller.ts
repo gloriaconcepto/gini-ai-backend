@@ -113,6 +113,9 @@ export class TenantController {
       emailTheme: realm.emailTheme,
       industry: getAttributeValue('industry'),
       domainName: getAttributeValue('domainName'),
+      ...(getAttributeValue('clientId')
+        ? { clientId: getAttributeValue('clientId') }
+        : {}),
       subscriptionTier: getAttributeValue('subscriptionTier') as
         'Basic' | 'Pro' | 'Enterprise' | undefined,
       taxId: getAttributeValue('taxId'),
