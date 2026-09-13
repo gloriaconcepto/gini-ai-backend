@@ -41,6 +41,12 @@ export class TenantWorkspaceResponseDto {
   })
   realm: string;
 
+  @ApiPropertyOptional({
+    example: 'gini-frontend',
+    description: 'Frontend client ID for OIDC authentication',
+  })
+  clientId?: string;
+
   @ApiProperty({
     example: true,
     description: 'Whether the tenant realm is active and enabled',

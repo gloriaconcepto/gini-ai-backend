@@ -76,6 +76,7 @@ export class SystemController {
     if (body.taxId) attributes.taxId = body.taxId;
     if (body.billingAddress) attributes.billingAddress = body.billingAddress;
     if (body.contactPhone) attributes.contactPhone = body.contactPhone;
+    if (body.clientId) attributes.clientId = body.clientId;
 
     const result = await this.keycloakService.provisionTenantRealm(
       tenantId,
@@ -101,7 +102,7 @@ export class SystemController {
         tenantId,
         body.tenantName,
         body.domainName,
-        body.clientId,
+        result.clientId || body.clientId,
       );
     }
 

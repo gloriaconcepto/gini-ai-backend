@@ -135,6 +135,7 @@ describe('SystemController', () => {
           taxId: 'TX-9988',
           billingAddress: '100 Main St',
           contactPhone: '+1-555-1234',
+          clientId: 'gini-frontend',
         },
         'gini-frontend',
       );

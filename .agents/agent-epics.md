@@ -124,12 +124,17 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Add unit and e2e tests covering maker submission, checker approval execution, checker rejection, and self-approval prevention (`checkerId === makerId`).
 
 ## Epic 2.1: Security Hardening, Credential Sanitization & Configuration Externalization (Priority 1 - Immediate)
-- [ ] **Security Vulnerability Remediation (P0)**:
+- [x] **Security Vulnerability Remediation (P0)**:
   - [x] Remove hardcoded backdoor `user.username === 'admin'` from `MasterAdminGuard`; enforce strict cryptographic master realm roles (`admin`, `realm-admin`, `manage-realm`).
   - [x] Fix privilege escalation in `ApiKeyGuard`: remove default `admin` role grant from API keys, defaulting strictly to `['service']`.
   - [x] Remove hardcoded `KEYCLOAK_ADMIN="admin"` and `KEYCLOAK_ADMIN_PASSWORD="admin"` from Azure Container Apps Terraform resource in `infra/terraform/main.tf`; wire via sensitive Terraform variables / Azure Key Vault.
   - [x] Restrict tenant SPA client redirect URIs and web origins in `KeycloakService.provisionTenantRealm` to avoid open wildcard redirects (`['*']`).
   - [x] Constrain permissive CORS origin reflection (`origin: true`) in Gateway `main.ts` using environment-driven origin whitelisting.
+- [x] **Dynamic Tenant Client ID Persistence & Pre-Login Discovery (Priority 1)**:
+  - [x] Persist `clientId` in Keycloak realm attributes during tenant provisioning (`KeycloakService.provisionTenantRealm` and `SystemController.createTenant`).
+  - [x] Implement dynamic client resolution in `TenantDomainService.resolveDomain` (read `realm.attributes.clientId`, fallback to inspecting public SPA clients via `KeycloakService.listClients`, eliminating hardcoded `'gini-frontend'`).
+  - [x] Expose `clientId` in `TenantWorkspaceResponseDto` (`GET /tenant/workspace`) for consistent post-login workspace client details.
+  - [x] Update unit tests across `tenant-domain.service.spec.ts`, `keycloak.service.spec.ts`, and `tenant.controller.spec.ts`.
 - [ ] **Secret Sanitization & Environment Externalization (P1)**:
   - [ ] Remove committed plaintext secrets from `infra/terraform/terraform.tfvars` and `.env.remote`.
   - [ ] Externalize seed secrets in `infra/keycloak/master-realm.json`, `scripts/init-keycloak.sh`, and `scripts/bootstrap-keycloak.sh` to consume environment variables with secure fallback generation.

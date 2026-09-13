@@ -271,7 +271,7 @@ describe('KeycloakService', () => {
         'custom-frontend-client',
       );
 
-      // Verify realm creation
+      // Verify realm creation with persisted clientId attribute
       expect(mockRealmsCreate).toHaveBeenCalledWith({
         realm: `tenant-${tenantId}`,
         displayName: tenantName,
@@ -280,7 +280,10 @@ describe('KeycloakService', () => {
         accountTheme: 'gini-theme',
         adminTheme: 'gini-theme',
         emailTheme: 'gini-theme',
-        attributes,
+        attributes: {
+          ...attributes,
+          clientId: 'custom-frontend-client',
+        },
       });
 
       // Verify roles creation includes maker, checker, auditor, user, admin
@@ -448,6 +451,14 @@ describe('KeycloakService', () => {
         checker,
       );
 
+      expect(mockRealmsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          realm: `tenant-${tenantId}`,
+          attributes: {
+            clientId: 'gini-frontend',
+          },
+        }),
+      );
       expect(mockClientsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           realm: `tenant-${tenantId}`,
