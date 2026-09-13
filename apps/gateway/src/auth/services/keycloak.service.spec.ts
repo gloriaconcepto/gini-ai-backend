@@ -16,6 +16,26 @@ const mockUsersCreate = jest.fn();
 const mockUsersFindOne = jest.fn();
 const mockUsersListRealmRoleMappings = jest.fn();
 const mockUsersAddRealmRoleMappings = jest.fn();
+const mockUsersListGroups = jest.fn();
+const mockUsersAddToGroup = jest.fn();
+const mockUsersDelFromGroup = jest.fn();
+
+const mockGroupsFind = jest.fn();
+const mockGroupsFindOne = jest.fn();
+const mockGroupsCreate = jest.fn();
+const mockGroupsCreateChildGroup = jest.fn();
+const mockGroupsUpdate = jest.fn();
+const mockGroupsDel = jest.fn();
+const mockGroupsListRoleMappings = jest.fn();
+const mockGroupsAddRealmRoleMappings = jest.fn();
+const mockGroupsDelRealmRoleMappings = jest.fn();
+const mockGroupsListMembers = jest.fn();
+const mockGroupsListSubGroups = jest.fn();
+
+const mockIdpFindOne = jest.fn();
+const mockIdpFindMappers = jest.fn();
+const mockIdpCreateMapper = jest.fn();
+const mockIdpDelMapper = jest.fn();
 
 jest.mock('@keycloak/keycloak-admin-client', () => {
   return jest.fn().mockImplementation(() => {
@@ -41,6 +61,28 @@ jest.mock('@keycloak/keycloak-admin-client', () => {
         findOne: mockUsersFindOne,
         listRealmRoleMappings: mockUsersListRealmRoleMappings,
         addRealmRoleMappings: mockUsersAddRealmRoleMappings,
+        listGroups: mockUsersListGroups,
+        addToGroup: mockUsersAddToGroup,
+        delFromGroup: mockUsersDelFromGroup,
+      },
+      groups: {
+        find: mockGroupsFind,
+        findOne: mockGroupsFindOne,
+        create: mockGroupsCreate,
+        createChildGroup: mockGroupsCreateChildGroup,
+        update: mockGroupsUpdate,
+        del: mockGroupsDel,
+        listRoleMappings: mockGroupsListRoleMappings,
+        addRealmRoleMappings: mockGroupsAddRealmRoleMappings,
+        delRealmRoleMappings: mockGroupsDelRealmRoleMappings,
+        listMembers: mockGroupsListMembers,
+        listSubGroups: mockGroupsListSubGroups,
+      },
+      identityProviders: {
+        findOne: mockIdpFindOne,
+        findMappers: mockIdpFindMappers,
+        createMapper: mockIdpCreateMapper,
+        delMapper: mockIdpDelMapper,
       },
     };
   });
@@ -505,6 +547,356 @@ describe('KeycloakService', () => {
       await expect(service.getUserById(tenantId, userId)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('Group & Corporate Hierarchy Management', () => {
+    const tenantId = 'test-tenant';
+
+    it('should list groups with mapped roles and nested subgroups', async () => {
+      mockGroupsFind.mockResolvedValueOnce([
+        {
+          id: 'grp-1',
+          name: 'Engineering',
+          path: '/Engineering',
+          attributes: { departmentCode: ['ENG-01'] },
+          subGroups: [
+            {
+              id: 'grp-2',
+              name: 'DevOps',
+              path: '/Engineering/DevOps',
+              attributes: {},
+              subGroups: [],
+            },
+          ],
+        },
+      ]);
+      mockGroupsListRoleMappings
+        .mockResolvedValueOnce({
+          realmMappings: [{ id: 'role-1', name: 'maker' }],
+        })
+        .mockResolvedValueOnce({
+          realmMappings: [{ id: 'role-2', name: 'user' }],
+        });
+
+      const result = await service.listGroups(tenantId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].name).toBe('Engineering');
+      expect(result[0].realmRoles).toEqual(['maker']);
+      expect(result[0].subGroups).toHaveLength(1);
+      expect(result[0].subGroups![0].name).toBe('DevOps');
+      expect(result[0].subGroups![0].realmRoles).toEqual(['user']);
+    });
+
+    it('should get group by id with roles', async () => {
+      mockGroupsFindOne.mockResolvedValueOnce({
+        id: 'grp-1',
+        name: 'Engineering',
+        path: '/Engineering',
+        attributes: { departmentCode: ['ENG-01'] },
+        subGroups: [],
+      });
+      mockGroupsListRoleMappings.mockResolvedValueOnce({
+        realmMappings: [{ id: 'role-1', name: 'admin' }],
+      });
+
+      const result = await service.getGroupById(tenantId, 'grp-1');
+
+      expect(result.id).toBe('grp-1');
+      expect(result.name).toBe('Engineering');
+      expect(result.realmRoles).toEqual(['admin']);
+    });
+
+    it('should throw NotFoundException when group by id is missing', async () => {
+      mockGroupsFindOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.getGroupById(tenantId, 'missing-grp'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should create top-level group and assign optional roles', async () => {
+      mockGroupsCreate.mockResolvedValueOnce({ id: 'new-grp-id' });
+      mockRolesFindOneByName.mockResolvedValueOnce({
+        id: 'role-id-user',
+        name: 'user',
+      });
+      mockGroupsAddRealmRoleMappings.mockResolvedValueOnce({});
+
+      const result = await service.createGroup(tenantId, {
+        name: 'Finance',
+        attributes: { costCenter: 'CC-100' },
+        roles: ['user'],
+      });
+
+      expect(result).toEqual({
+        success: true,
+        id: 'new-grp-id',
+        name: 'Finance',
+      });
+      expect(mockGroupsCreate).toHaveBeenCalledWith({
+        realm: 'tenant-test-tenant',
+        name: 'Finance',
+        attributes: { costCenter: ['CC-100'] },
+      });
+      expect(mockGroupsAddRealmRoleMappings).toHaveBeenCalledWith({
+        realm: 'tenant-test-tenant',
+        id: 'new-grp-id',
+        roles: [{ id: 'role-id-user', name: 'user' }],
+      });
+    });
+
+    it('should create child subgroup under parent group', async () => {
+      mockGroupsCreateChildGroup.mockResolvedValueOnce({ id: 'sub-grp-id' });
+
+      const result = await service.createSubGroup(tenantId, 'parent-grp-id', {
+        name: 'Auditing',
+        attributes: { auditLevel: ['tier-1'] },
+      });
+
+      expect(result).toEqual({
+        success: true,
+        id: 'sub-grp-id',
+        parentId: 'parent-grp-id',
+        name: 'Auditing',
+      });
+      expect(mockGroupsCreateChildGroup).toHaveBeenCalledWith(
+        { realm: 'tenant-test-tenant', id: 'parent-grp-id' },
+        { name: 'Auditing', attributes: { auditLevel: ['tier-1'] } },
+      );
+    });
+
+    it('should update group name and attributes', async () => {
+      mockGroupsUpdate.mockResolvedValueOnce(undefined);
+
+      const result = await service.updateGroup(tenantId, 'grp-id', {
+        name: 'Platform Engineering',
+        attributes: { teamLead: 'lead@example.com' },
+      });
+
+      expect(result).toEqual({ success: true, id: 'grp-id' });
+      expect(mockGroupsUpdate).toHaveBeenCalledWith(
+        { realm: 'tenant-test-tenant', id: 'grp-id' },
+        {
+          name: 'Platform Engineering',
+          attributes: { teamLead: ['lead@example.com'] },
+        },
+      );
+    });
+
+    it('should delete group by id', async () => {
+      mockGroupsDel.mockResolvedValueOnce(undefined);
+
+      const result = await service.deleteGroup(tenantId, 'grp-id');
+
+      expect(result).toEqual({ success: true, id: 'grp-id' });
+      expect(mockGroupsDel).toHaveBeenCalledWith({
+        realm: 'tenant-test-tenant',
+        id: 'grp-id',
+      });
+    });
+
+    it('should assign role to group', async () => {
+      mockRolesFindOneByName.mockResolvedValueOnce({
+        id: 'r-1',
+        name: 'maker',
+      });
+      mockGroupsAddRealmRoleMappings.mockResolvedValueOnce({});
+
+      const result = await service.assignRoleToGroup(
+        tenantId,
+        'grp-id',
+        'maker',
+      );
+
+      expect(result).toEqual({
+        success: true,
+        groupId: 'grp-id',
+        roleName: 'maker',
+      });
+    });
+
+    it('should throw NotFoundException when assigning non-existent role to group', async () => {
+      mockRolesFindOneByName.mockResolvedValueOnce(null);
+
+      await expect(
+        service.assignRoleToGroup(tenantId, 'grp-id', 'ghost-role'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should remove role from group', async () => {
+      mockRolesFindOneByName.mockResolvedValueOnce({
+        id: 'r-1',
+        name: 'maker',
+      });
+      mockGroupsDelRealmRoleMappings.mockResolvedValueOnce({});
+
+      const result = await service.removeRoleFromGroup(
+        tenantId,
+        'grp-id',
+        'maker',
+      );
+
+      expect(result).toEqual({
+        success: true,
+        groupId: 'grp-id',
+        roleName: 'maker',
+      });
+    });
+
+    it('should list group members', async () => {
+      mockGroupsListMembers.mockResolvedValueOnce([
+        { id: 'u-1', username: 'alice' },
+      ]);
+
+      const result = await service.listGroupMembers(tenantId, 'grp-id');
+
+      expect(result).toEqual([{ id: 'u-1', username: 'alice' }]);
+    });
+  });
+
+  describe('User Group Memberships', () => {
+    const tenantId = 'test-tenant';
+
+    it('should list user groups', async () => {
+      mockUsersListGroups.mockResolvedValueOnce([
+        { id: 'g-1', name: 'Engineering' },
+      ]);
+
+      const result = await service.getUserGroups(tenantId, 'u-1');
+
+      expect(result).toEqual([{ id: 'g-1', name: 'Engineering' }]);
+    });
+
+    it('should add user to group', async () => {
+      mockUsersAddToGroup.mockResolvedValueOnce(undefined);
+
+      const result = await service.addUserToGroup(tenantId, 'u-1', 'g-1');
+
+      expect(result).toEqual({ success: true, userId: 'u-1', groupId: 'g-1' });
+    });
+
+    it('should remove user from group', async () => {
+      mockUsersDelFromGroup.mockResolvedValueOnce(undefined);
+
+      const result = await service.removeUserFromGroup(tenantId, 'u-1', 'g-1');
+
+      expect(result).toEqual({ success: true, userId: 'u-1', groupId: 'g-1' });
+    });
+  });
+
+  describe('Identity Provider Mappers', () => {
+    const tenantId = 'test-tenant';
+
+    it('should list IdP mappers', async () => {
+      mockIdpFindMappers.mockResolvedValueOnce([
+        { id: 'm-1', name: 'Role Mapper' },
+      ]);
+
+      const result = await service.listIdpMappers(tenantId, 'azure-ad');
+
+      expect(result).toEqual([{ id: 'm-1', name: 'Role Mapper' }]);
+    });
+
+    it('should create IdP mapper', async () => {
+      mockIdpCreateMapper.mockResolvedValueOnce({ id: 'new-map-id' });
+
+      const result = await service.createIdpMapper(tenantId, 'azure-ad', {
+        name: 'Azure AD Role Mapper',
+        identityProviderMapper: 'oidc-role-idp-mapper',
+        config: { claim: 'roles', role: 'maker' },
+      });
+
+      expect(result).toEqual({
+        success: true,
+        id: 'new-map-id',
+        name: 'Azure AD Role Mapper',
+      });
+    });
+
+    it('should delete IdP mapper', async () => {
+      mockIdpDelMapper.mockResolvedValueOnce(undefined);
+
+      const result = await service.deleteIdpMapper(
+        tenantId,
+        'azure-ad',
+        'map-123',
+      );
+
+      expect(result).toEqual({ success: true, id: 'map-123' });
+    });
+  });
+
+  describe('3rd-Party IdP Directory & Hierarchy Sync Engine', () => {
+    const tenantId = 'test-tenant';
+
+    it('should synchronize roles, group tree, subgroups, and group roles', async () => {
+      mockIdpFindOne.mockResolvedValueOnce({ alias: 'azure-ad' });
+      // Role checking
+      mockRolesFindOneByName.mockResolvedValueOnce(null); // role doesn't exist yet
+      mockRolesCreate.mockResolvedValueOnce({ id: 'r-lead' });
+
+      // Group checking
+      mockGroupsFind.mockResolvedValueOnce([]); // no groups exist initially
+      mockGroupsCreate.mockResolvedValueOnce({ id: 'g-root' });
+      mockRolesFindOneByName.mockResolvedValueOnce({
+        id: 'r-user',
+        name: 'user',
+      }); // for group role mapping
+      mockGroupsAddRealmRoleMappings.mockResolvedValueOnce({});
+
+      // Subgroup checking
+      mockGroupsListSubGroups.mockResolvedValueOnce([]); // no subgroups yet
+      mockGroupsCreateChildGroup.mockResolvedValueOnce({ id: 'g-sub' });
+      mockRolesFindOneByName.mockResolvedValueOnce({
+        id: 'r-maker',
+        name: 'maker',
+      }); // for subgroup role mapping
+      mockGroupsAddRealmRoleMappings.mockResolvedValueOnce({});
+
+      const syncDto = {
+        roles: [{ name: 'engineering-lead', description: 'Lead engineer' }],
+        groups: [
+          {
+            name: 'Engineering',
+            attributes: { departmentCode: ['ENG'] },
+            roles: ['user'],
+            subGroups: [
+              {
+                name: 'DevOps',
+                attributes: { tier: ['critical'] },
+                roles: ['maker'],
+              },
+            ],
+          },
+        ],
+        providerCredentials: { clientSecret: 'secret-xyz' },
+      };
+
+      const result = await service.syncIdpHierarchy(
+        tenantId,
+        'azure-ad',
+        syncDto,
+      );
+
+      expect(result.rolesCreated).toBe(1);
+      expect(result.groupsCreated).toBe(1);
+      expect(result.subgroupsCreated).toBe(1);
+      expect(result.roleMappingsCreated).toBe(2);
+      expect(result.details).toContain('Created role: engineering-lead');
+      expect(result.details).toContain('Created top-level group: Engineering');
+      expect(result.details).toContain(
+        "Created subgroup 'DevOps' under 'Engineering'",
+      );
+    });
+
+    it('should throw NotFoundException if Identity Provider does not exist', async () => {
+      mockIdpFindOne.mockResolvedValueOnce(null);
+
+      await expect(
+        service.syncIdpHierarchy(tenantId, 'non-existent-idp', {}),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

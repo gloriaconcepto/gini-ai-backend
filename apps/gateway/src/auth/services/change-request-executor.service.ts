@@ -12,6 +12,11 @@ import {
   CreateIamClientDto,
   CreateIdpDto,
 } from '../dto/iam.dtos';
+import type {
+  CreateIamGroupDto,
+  CreateIamSubgroupDto,
+} from '../dto/iam-group.dtos';
+import type { CreateIdpMapperDto } from '../dto/iam-idp-mapper.dtos';
 
 interface RequestPayload {
   body?: Record<string, unknown>;
@@ -160,6 +165,146 @@ export class ChangeRequestExecutorService {
           throw new BadRequestException('Missing alias for DELETE_IDP action');
         }
         return this.keycloakService.deleteIdentityProvider(tenantId, alias);
+      }
+
+      case 'CREATE_GROUP':
+        return this.keycloakService.createGroup(
+          tenantId,
+          body as unknown as CreateIamGroupDto,
+        );
+
+      case 'CREATE_SUBGROUP': {
+        const groupId =
+          targetResourceId || params.groupId || (body.groupId as string);
+        if (!groupId) {
+          throw new BadRequestException(
+            'Missing groupId for CREATE_SUBGROUP action',
+          );
+        }
+        return this.keycloakService.createSubGroup(
+          tenantId,
+          groupId,
+          body as unknown as CreateIamSubgroupDto,
+        );
+      }
+
+      case 'UPDATE_GROUP': {
+        const groupId =
+          targetResourceId || params.groupId || (body.groupId as string);
+        if (!groupId) {
+          throw new BadRequestException(
+            'Missing groupId for UPDATE_GROUP action',
+          );
+        }
+        return this.keycloakService.updateGroup(tenantId, groupId, body);
+      }
+
+      case 'DELETE_GROUP': {
+        const groupId =
+          targetResourceId || params.groupId || (body.groupId as string);
+        if (!groupId) {
+          throw new BadRequestException(
+            'Missing groupId for DELETE_GROUP action',
+          );
+        }
+        return this.keycloakService.deleteGroup(tenantId, groupId);
+      }
+
+      case 'ASSIGN_GROUP_ROLE': {
+        const groupId =
+          targetResourceId || params.groupId || (body.groupId as string);
+        const roleName = (body.roleName as string) || params.roleName;
+        if (!groupId || !roleName) {
+          throw new BadRequestException(
+            'Missing groupId or roleName for ASSIGN_GROUP_ROLE action',
+          );
+        }
+        return this.keycloakService.assignRoleToGroup(
+          tenantId,
+          groupId,
+          roleName,
+        );
+      }
+
+      case 'REMOVE_GROUP_ROLE': {
+        const groupId =
+          targetResourceId || params.groupId || (body.groupId as string);
+        const roleName = params.roleName || (body.roleName as string);
+        if (!groupId || !roleName) {
+          throw new BadRequestException(
+            'Missing groupId or roleName for REMOVE_GROUP_ROLE action',
+          );
+        }
+        return this.keycloakService.removeRoleFromGroup(
+          tenantId,
+          groupId,
+          roleName,
+        );
+      }
+
+      case 'ADD_USER_TO_GROUP': {
+        const userId =
+          targetResourceId || params.userId || (body.userId as string);
+        const groupId = params.groupId || (body.groupId as string);
+        if (!userId || !groupId) {
+          throw new BadRequestException(
+            'Missing userId or groupId for ADD_USER_TO_GROUP action',
+          );
+        }
+        return this.keycloakService.addUserToGroup(tenantId, userId, groupId);
+      }
+
+      case 'REMOVE_USER_FROM_GROUP': {
+        const userId =
+          targetResourceId || params.userId || (body.userId as string);
+        const groupId = params.groupId || (body.groupId as string);
+        if (!userId || !groupId) {
+          throw new BadRequestException(
+            'Missing userId or groupId for REMOVE_USER_FROM_GROUP action',
+          );
+        }
+        return this.keycloakService.removeUserFromGroup(
+          tenantId,
+          userId,
+          groupId,
+        );
+      }
+
+      case 'CREATE_IDP_MAPPER': {
+        const alias = params.alias || (body.alias as string);
+        if (!alias) {
+          throw new BadRequestException(
+            'Missing alias for CREATE_IDP_MAPPER action',
+          );
+        }
+        return this.keycloakService.createIdpMapper(
+          tenantId,
+          alias,
+          body as unknown as CreateIdpMapperDto,
+        );
+      }
+
+      case 'DELETE_IDP_MAPPER': {
+        const alias = params.alias || (body.alias as string);
+        const mapperId =
+          targetResourceId || params.mapperId || (body.mapperId as string);
+        if (!alias || !mapperId) {
+          throw new BadRequestException(
+            'Missing alias or mapperId for DELETE_IDP_MAPPER action',
+          );
+        }
+        return this.keycloakService.deleteIdpMapper(tenantId, alias, mapperId);
+      }
+
+      case 'SYNC_IDP_HIERARCHY': {
+        const alias =
+          targetResourceId || params.alias || (body.alias as string);
+        if (!alias) {
+          throw new BadRequestException(
+            'Missing alias for SYNC_IDP_HIERARCHY action',
+          );
+        }
+        return this.keycloakService.syncIdpHierarchy(tenantId, alias, body);
       }
 
       default:

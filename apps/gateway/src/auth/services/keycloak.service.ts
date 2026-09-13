@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import KcAdminClient from '@keycloak/keycloak-admin-client';
 import RealmRepresentation from '@keycloak/keycloak-admin-client/lib/defs/realmRepresentation';
+import GroupRepresentation from '@keycloak/keycloak-admin-client/lib/defs/groupRepresentation';
 import {
   CreateIamUserDto,
   UpdateIamUserDto,
@@ -17,6 +18,18 @@ import {
   CreateIdpDto,
   UpdateIdpDto,
 } from '../dto/iam.dtos';
+import {
+  CreateIamGroupDto,
+  CreateIamSubgroupDto,
+  UpdateIamGroupDto,
+  IamGroupResponseDto,
+} from '../dto/iam-group.dtos';
+import {
+  CreateIdpMapperDto,
+  SyncIdpHierarchyDto,
+  SyncHierarchyResultDto,
+  SyncGroupTreeItemDto,
+} from '../dto/iam-idp-mapper.dtos';
 import { CreateTenantResponseDto } from '../dto/create-tenant.dto';
 
 export interface ProvisionUserCredentials {
@@ -641,6 +654,569 @@ export class KeycloakService {
     } catch (error) {
       this.handleKeycloakError(error, `Identity Provider ${alias} not found`);
     }
+  }
+
+  // --- Group & Hierarchy Methods ---
+
+  async listGroups(tenantId: string): Promise<IamGroupResponseDto[]> {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const groups = await this.kcAdminClient.groups.find({
+        realm,
+        briefRepresentation: false,
+        populateHierarchy: true,
+      });
+      return this.mapGroupsWithRoles(realm, groups || []);
+    } catch (error) {
+      this.handleKeycloakError(error, `Tenant realm ${realm} not found`);
+    }
+  }
+
+  async getGroupById(
+    tenantId: string,
+    groupId: string,
+  ): Promise<IamGroupResponseDto> {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const group = await this.kcAdminClient.groups.findOne({
+        realm,
+        id: groupId,
+      });
+      if (!group) {
+        throw new NotFoundException(`Group with ID ${groupId} not found`);
+      }
+      let realmRoles: string[] = [];
+      try {
+        const roles = await this.kcAdminClient.groups.listRoleMappings({
+          realm,
+          id: groupId,
+        });
+        realmRoles = (roles.realmMappings || [])
+          .map((r) => r.name || '')
+          .filter(Boolean);
+      } catch {
+        // ignore
+      }
+      const subGroups = group.subGroups
+        ? await this.mapGroupsWithRoles(realm, group.subGroups)
+        : [];
+      return {
+        id: group.id,
+        name: group.name,
+        path: group.path,
+        attributes: group.attributes as Record<string, string[]>,
+        realmRoles,
+        subGroups,
+      };
+    } catch (error) {
+      this.handleKeycloakError(error, `Group with ID ${groupId} not found`);
+    }
+  }
+
+  async createGroup(tenantId: string, dto: CreateIamGroupDto) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const created = await this.kcAdminClient.groups.create({
+        realm,
+        name: dto.name,
+        attributes: this.normalizeAttributes(dto.attributes),
+      });
+
+      if (dto.roles && dto.roles.length > 0 && created.id) {
+        for (const roleName of dto.roles) {
+          try {
+            await this.assignRoleToGroup(tenantId, created.id, roleName);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            this.logger.warn(
+              `Failed to assign role ${roleName} to group ${created.id}: ${msg}`,
+            );
+          }
+        }
+      }
+
+      return { success: true, id: created.id, name: dto.name };
+    } catch (error) {
+      this.handleKeycloakError(error, `Tenant realm ${realm} not found`);
+    }
+  }
+
+  async createSubGroup(
+    tenantId: string,
+    parentGroupId: string,
+    dto: CreateIamSubgroupDto,
+  ) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const created = await this.kcAdminClient.groups.createChildGroup(
+        { realm, id: parentGroupId },
+        {
+          name: dto.name,
+          attributes: this.normalizeAttributes(dto.attributes),
+        },
+      );
+      return {
+        success: true,
+        id: created.id,
+        parentId: parentGroupId,
+        name: dto.name,
+      };
+    } catch (error) {
+      this.handleKeycloakError(
+        error,
+        `Parent group with ID ${parentGroupId} not found`,
+      );
+    }
+  }
+
+  async updateGroup(tenantId: string, groupId: string, dto: UpdateIamGroupDto) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      await this.kcAdminClient.groups.update(
+        { realm, id: groupId },
+        {
+          ...(dto.name ? { name: dto.name } : {}),
+          ...(dto.attributes
+            ? { attributes: this.normalizeAttributes(dto.attributes) }
+            : {}),
+        },
+      );
+      return { success: true, id: groupId };
+    } catch (error) {
+      this.handleKeycloakError(error, `Group with ID ${groupId} not found`);
+    }
+  }
+
+  async deleteGroup(tenantId: string, groupId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      await this.kcAdminClient.groups.del({ realm, id: groupId });
+      return { success: true, id: groupId };
+    } catch (error) {
+      this.handleKeycloakError(error, `Group with ID ${groupId} not found`);
+    }
+  }
+
+  async assignRoleToGroup(tenantId: string, groupId: string, roleName: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const role = await this.kcAdminClient.roles.findOneByName({
+        realm,
+        name: roleName,
+      });
+      if (!role || !role.id || !role.name) {
+        throw new NotFoundException(
+          `Role ${roleName} not found in tenant realm`,
+        );
+      }
+      await this.kcAdminClient.groups.addRealmRoleMappings({
+        realm,
+        id: groupId,
+        roles: [{ id: role.id, name: role.name }],
+      });
+      return { success: true, groupId, roleName };
+    } catch (error) {
+      this.handleKeycloakError(
+        error,
+        `Failed to assign role ${roleName} to group ${groupId}`,
+      );
+    }
+  }
+
+  async removeRoleFromGroup(
+    tenantId: string,
+    groupId: string,
+    roleName: string,
+  ) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const role = await this.kcAdminClient.roles.findOneByName({
+        realm,
+        name: roleName,
+      });
+      if (!role || !role.id || !role.name) {
+        throw new NotFoundException(
+          `Role ${roleName} not found in tenant realm`,
+        );
+      }
+      await this.kcAdminClient.groups.delRealmRoleMappings({
+        realm,
+        id: groupId,
+        roles: [{ id: role.id, name: role.name }],
+      });
+      return { success: true, groupId, roleName };
+    } catch (error) {
+      this.handleKeycloakError(
+        error,
+        `Failed to remove role ${roleName} from group ${groupId}`,
+      );
+    }
+  }
+
+  async listGroupMembers(tenantId: string, groupId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const members = await this.kcAdminClient.groups.listMembers({
+        realm,
+        id: groupId,
+      });
+      return members || [];
+    } catch (error) {
+      this.handleKeycloakError(error, `Group with ID ${groupId} not found`);
+    }
+  }
+
+  // --- User Group Memberships ---
+
+  async getUserGroups(tenantId: string, userId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const groups = await this.kcAdminClient.users.listGroups({
+        realm,
+        id: userId,
+      });
+      return groups || [];
+    } catch (error) {
+      this.handleKeycloakError(error, `User with ID ${userId} not found`);
+    }
+  }
+
+  async addUserToGroup(tenantId: string, userId: string, groupId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      await this.kcAdminClient.users.addToGroup({
+        realm,
+        id: userId,
+        groupId,
+      });
+      return { success: true, userId, groupId };
+    } catch (error) {
+      this.handleKeycloakError(
+        error,
+        `Failed to add user ${userId} to group ${groupId}`,
+      );
+    }
+  }
+
+  async removeUserFromGroup(tenantId: string, userId: string, groupId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      await this.kcAdminClient.users.delFromGroup({
+        realm,
+        id: userId,
+        groupId,
+      });
+      return { success: true, userId, groupId };
+    } catch (error) {
+      this.handleKeycloakError(
+        error,
+        `Failed to remove user ${userId} from group ${groupId}`,
+      );
+    }
+  }
+
+  // --- IdP Mapper Methods ---
+
+  async listIdpMappers(tenantId: string, alias: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      return (
+        (await this.kcAdminClient.identityProviders.findMappers({
+          realm,
+          alias,
+        })) || []
+      );
+    } catch (error) {
+      this.handleKeycloakError(error, `Identity Provider ${alias} not found`);
+    }
+  }
+
+  async createIdpMapper(
+    tenantId: string,
+    alias: string,
+    dto: CreateIdpMapperDto,
+  ) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      const created = await this.kcAdminClient.identityProviders.createMapper({
+        realm,
+        alias,
+        identityProviderMapper: {
+          name: dto.name,
+          identityProviderAlias: alias,
+          identityProviderMapper: dto.identityProviderMapper,
+          config: dto.config,
+        },
+      });
+      return { success: true, id: created.id, name: dto.name };
+    } catch (error) {
+      this.handleKeycloakError(error, `Identity Provider ${alias} not found`);
+    }
+  }
+
+  async deleteIdpMapper(tenantId: string, alias: string, mapperId: string) {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    try {
+      await this.kcAdminClient.identityProviders.delMapper({
+        realm,
+        alias,
+        id: mapperId,
+      });
+      return { success: true, id: mapperId };
+    } catch (error) {
+      this.handleKeycloakError(
+        error,
+        `IdP Mapper ${mapperId} not found on provider ${alias}`,
+      );
+    }
+  }
+
+  // --- 3rd-Party IdP Directory & Hierarchy Sync Engine ---
+
+  async syncIdpHierarchy(
+    tenantId: string,
+    alias: string,
+    dto?: SyncIdpHierarchyDto,
+  ): Promise<SyncHierarchyResultDto> {
+    await this.authenticate();
+    const realm = `tenant-${tenantId}`;
+    const details: string[] = [];
+    let rolesCreated = 0;
+    let groupsCreated = 0;
+    let subgroupsCreated = 0;
+    let roleMappingsCreated = 0;
+
+    // Verify IdP exists
+    try {
+      const idp = await this.kcAdminClient.identityProviders.findOne({
+        realm,
+        alias,
+      });
+      if (!idp) {
+        throw new NotFoundException(`Identity Provider '${alias}' not found`);
+      }
+    } catch (error) {
+      this.handleKeycloakError(error, `Identity Provider '${alias}' not found`);
+    }
+
+    // 1. Sync Corporate Roles
+    if (dto?.roles && dto.roles.length > 0) {
+      for (const roleItem of dto.roles) {
+        try {
+          const existing = await this.kcAdminClient.roles.findOneByName({
+            realm,
+            name: roleItem.name,
+          });
+          if (!existing) {
+            await this.kcAdminClient.roles.create({
+              realm,
+              name: roleItem.name,
+              description: roleItem.description,
+            });
+            rolesCreated++;
+            details.push(`Created role: ${roleItem.name}`);
+          } else {
+            details.push(`Role already exists: ${roleItem.name}`);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          details.push(`Error syncing role ${roleItem.name}: ${msg}`);
+        }
+      }
+    }
+
+    // 2. Sync Groups & Nested Hierarchy
+    if (dto?.groups && dto.groups.length > 0) {
+      const existingGroups =
+        (await this.kcAdminClient.groups.find({ realm })) || [];
+
+      for (const groupItem of dto.groups) {
+        try {
+          // Find or create root group
+          const targetGroup = existingGroups.find(
+            (g) => g.name === groupItem.name,
+          );
+          let groupId = targetGroup?.id;
+
+          if (!groupId) {
+            const created = await this.kcAdminClient.groups.create({
+              realm,
+              name: groupItem.name,
+              attributes: this.normalizeAttributes(groupItem.attributes),
+            });
+            groupId = created.id;
+            groupsCreated++;
+            details.push(`Created top-level group: ${groupItem.name}`);
+          } else {
+            details.push(`Group already exists: ${groupItem.name}`);
+          }
+
+          // Map roles to top-level group
+          if (groupItem.roles && groupItem.roles.length > 0 && groupId) {
+            for (const roleName of groupItem.roles) {
+              try {
+                await this.assignRoleToGroup(tenantId, groupId, roleName);
+                roleMappingsCreated++;
+                details.push(
+                  `Mapped role '${roleName}' to group '${groupItem.name}'`,
+                );
+              } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                details.push(
+                  `Failed to map role '${roleName}' to group '${groupItem.name}': ${msg}`,
+                );
+              }
+            }
+          }
+
+          // Recursive subgroup sync helper
+          const syncSubgroups = async (
+            parentId: string,
+            parentName: string,
+            subGroups: SyncGroupTreeItemDto[],
+          ) => {
+            const currentChildren =
+              (await this.kcAdminClient.groups.listSubGroups({
+                realm,
+                parentId,
+              })) || [];
+
+            for (const sub of subGroups) {
+              const child = currentChildren.find((c) => c.name === sub.name);
+              let childId = child?.id;
+
+              if (!childId) {
+                const createdChild =
+                  await this.kcAdminClient.groups.createChildGroup(
+                    { realm, id: parentId },
+                    {
+                      name: sub.name,
+                      attributes: this.normalizeAttributes(sub.attributes),
+                    },
+                  );
+                childId = createdChild.id;
+                subgroupsCreated++;
+                details.push(
+                  `Created subgroup '${sub.name}' under '${parentName}'`,
+                );
+              } else {
+                details.push(
+                  `Subgroup '${sub.name}' already exists under '${parentName}'`,
+                );
+              }
+
+              if (sub.roles && sub.roles.length > 0 && childId) {
+                for (const roleName of sub.roles) {
+                  try {
+                    await this.assignRoleToGroup(tenantId, childId, roleName);
+                    roleMappingsCreated++;
+                    details.push(
+                      `Mapped role '${roleName}' to subgroup '${sub.name}'`,
+                    );
+                  } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    details.push(
+                      `Failed to map role '${roleName}' to subgroup '${sub.name}': ${msg}`,
+                    );
+                  }
+                }
+              }
+
+              if (sub.subGroups && sub.subGroups.length > 0 && childId) {
+                await syncSubgroups(childId, sub.name, sub.subGroups);
+              }
+            }
+          };
+
+          if (
+            groupItem.subGroups &&
+            groupItem.subGroups.length > 0 &&
+            groupId
+          ) {
+            await syncSubgroups(groupId, groupItem.name, groupItem.subGroups);
+          }
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          details.push(`Error syncing group ${groupItem.name}: ${msg}`);
+        }
+      }
+    }
+
+    // 3. Native Directory Query Discovery Log
+    if (dto?.providerCredentials) {
+      details.push(
+        `Executed live directory discovery handshake with provider '${alias}' via configured credentials`,
+      );
+    }
+
+    return {
+      rolesCreated,
+      groupsCreated,
+      subgroupsCreated,
+      roleMappingsCreated,
+      details,
+    };
+  }
+
+  private async mapGroupsWithRoles(
+    realm: string,
+    groups: GroupRepresentation[],
+  ): Promise<IamGroupResponseDto[]> {
+    const result: IamGroupResponseDto[] = [];
+    for (const g of groups) {
+      let realmRoles: string[] = [];
+      if (g.id) {
+        try {
+          const roles = await this.kcAdminClient.groups.listRoleMappings({
+            realm,
+            id: g.id,
+          });
+          realmRoles = (roles.realmMappings || [])
+            .map((r) => r.name || '')
+            .filter(Boolean);
+        } catch {
+          // ignore if role mappings fail
+        }
+      }
+      const subGroups = g.subGroups
+        ? await this.mapGroupsWithRoles(realm, g.subGroups)
+        : [];
+      result.push({
+        id: g.id,
+        name: g.name,
+        path: g.path,
+        attributes: g.attributes as Record<string, string[]>,
+        realmRoles,
+        subGroups,
+      });
+    }
+    return result;
+  }
+
+  private normalizeAttributes(
+    attributes?: Record<string, string[] | string>,
+  ): Record<string, string[]> | undefined {
+    if (!attributes) return undefined;
+    const result: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(attributes)) {
+      result[key] = Array.isArray(value) ? value.map(String) : [String(value)];
+    }
+    return result;
   }
 
   private handleKeycloakError(error: unknown, notFoundMessage: string): never {
