@@ -345,6 +345,18 @@ resource "azurerm_container_app" "gateway" {
         name  = "KEYCLOAK_URL"
         value = "https://${azurerm_container_app.keycloak.ingress[0].fqdn}"
       }
+      env {
+        name  = "OEM_BACKOFFICE_URL"
+        value = "https://ca-oem-backoffice-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain}"
+      }
+      env {
+        name  = "ALLOWED_ORIGINS"
+        value = var.cors_origins != "" ? var.cors_origins : "https://ca-enterprise-portal-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain},https://ca-oem-backoffice-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain}"
+      }
+      env {
+        name  = "CORS_ORIGINS"
+        value = var.cors_origins != "" ? var.cors_origins : "https://ca-enterprise-portal-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain},https://ca-oem-backoffice-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain}"
+      }
     }
   }
 
