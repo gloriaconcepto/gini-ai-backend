@@ -214,6 +214,16 @@ resource "azurerm_container_app" "keycloak" {
     }
   }
 
+  secret {
+    name  = "kc-db-password"
+    value = var.db_admin_password
+  }
+
+  secret {
+    name  = "keycloak-admin-password"
+    value = var.keycloak_admin_password
+  }
+
   template {
     min_replicas = var.enable_scale_to_zero ? 0 : 1
     max_replicas = 1
@@ -237,16 +247,16 @@ resource "azurerm_container_app" "keycloak" {
         value = var.db_admin_username
       }
       env {
-        name  = "KC_DB_PASSWORD"
-        value = var.db_admin_password
+        name        = "KC_DB_PASSWORD"
+        secret_name = "kc-db-password"
       }
       env {
         name  = "KEYCLOAK_ADMIN"
-        value = "admin"
+        value = var.keycloak_admin_username
       }
       env {
-        name  = "KEYCLOAK_ADMIN_PASSWORD"
-        value = "admin"
+        name        = "KEYCLOAK_ADMIN_PASSWORD"
+        secret_name = "keycloak-admin-password"
       }
       env {
         name  = "KC_PROXY_HEADERS"

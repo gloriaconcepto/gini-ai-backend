@@ -10,9 +10,41 @@ async function bootstrap() {
   const server = app.getHttpServer();
   server.maxHeaderSize = 65536;
 
-  // Enable CORS
+  // Configure CORS with explicit origin validation (eliminating reflected origin vulnerability)
+  const corsOriginsEnv =
+    process.env.CORS_ORIGINS || process.env.ALLOWED_ORIGINS;
+  const configuredCorsOrigins = corsOriginsEnv
+    ? corsOriginsEnv
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean)
+    : [];
+
+  const corsOriginValidator = (
+    requestOrigin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => {
+    if (!requestOrigin) {
+      return callback(null, true);
+    }
+    if (configuredCorsOrigins.includes(requestOrigin)) {
+      return callback(null, true);
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      const isLocalhost =
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(requestOrigin);
+      if (isLocalhost) {
+        return callback(null, true);
+      }
+    }
+    return callback(
+      new Error(`CORS blocked for origin: ${requestOrigin}`),
+      false,
+    );
+  };
+
   app.enableCors({
-    origin: true,
+    origin: corsOriginValidator,
     credentials: true,
     exposedHeaders: ['X-Tenant-ID'],
     allowedHeaders: [

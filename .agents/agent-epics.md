@@ -123,6 +123,22 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Refactor `IamController` permissions: remove `@Roles('admin')` and replace with `@Roles('maker', 'checker')` (or role-specific permissions per endpoint).
 - [x] Add unit and e2e tests covering maker submission, checker approval execution, checker rejection, and self-approval prevention (`checkerId === makerId`).
 
+## Epic 2.1: Security Hardening, Credential Sanitization & Configuration Externalization (Priority 1 - Immediate)
+- [ ] **Security Vulnerability Remediation (P0)**:
+  - [x] Remove hardcoded backdoor `user.username === 'admin'` from `MasterAdminGuard`; enforce strict cryptographic master realm roles (`admin`, `realm-admin`, `manage-realm`).
+  - [x] Fix privilege escalation in `ApiKeyGuard`: remove default `admin` role grant from API keys, defaulting strictly to `['service']`.
+  - [x] Remove hardcoded `KEYCLOAK_ADMIN="admin"` and `KEYCLOAK_ADMIN_PASSWORD="admin"` from Azure Container Apps Terraform resource in `infra/terraform/main.tf`; wire via sensitive Terraform variables / Azure Key Vault.
+  - [x] Restrict tenant SPA client redirect URIs and web origins in `KeycloakService.provisionTenantRealm` to avoid open wildcard redirects (`['*']`).
+  - [x] Constrain permissive CORS origin reflection (`origin: true`) in Gateway `main.ts` using environment-driven origin whitelisting.
+- [ ] **Secret Sanitization & Environment Externalization (P1)**:
+  - [ ] Remove committed plaintext secrets from `infra/terraform/terraform.tfvars` and `.env.remote`.
+  - [ ] Externalize seed secrets in `infra/keycloak/master-realm.json`, `scripts/init-keycloak.sh`, and `scripts/bootstrap-keycloak.sh` to consume environment variables with secure fallback generation.
+  - [ ] Standardize environment variable casing: replace `process.env.port` with `process.env.PORT` across `apps/gateway/src/main.ts` and `apps/workers/src/main.ts`.
+  - [ ] Disambiguate default worker service port (assign distinct default `PORT=3001` for workers to prevent port collision with gateway on `3000`).
+- [ ] **Codebase Magic Numbers & Constants Cleanup (P2)**:
+  - [ ] Refactor magic numbers (`65536` max header size, `jwksRequestsPerMinute: 10`, `export limit: 5000`, API key entropy/prefix lengths) into centralized constants or configuration values.
+  - [ ] Centralize hardcoded realm conventions (`tenant-` prefix, `/realms/master`, `gini-frontend`, `gini-theme`) into unified configuration tokens.
+
 ## Epic 3: Database & Tenant Isolation (Priority 2)
 - [ ] Configure Drizzle ORM to connect to the local `pgvector` instance.
 - [ ] Bind `tenant_id` to Drizzle ORM context for strict Row-Level Security (RLS) enforcement.

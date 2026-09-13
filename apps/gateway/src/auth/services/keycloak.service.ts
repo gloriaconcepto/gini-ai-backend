@@ -173,6 +173,37 @@ export class KeycloakService {
       }
 
       // 3. Provision default SPA Frontend Client in the tenant realm
+      // Build restricted redirect URIs and web origins (eliminating wildcard vulnerability)
+      const allowedOrigins: string[] = [];
+      const redirectUris: string[] = [];
+
+      if (attributes?.domainName) {
+        const domain = attributes.domainName.trim();
+        allowedOrigins.push(`https://${domain}`, `https://*.${domain}`);
+        redirectUris.push(`https://${domain}/*`, `https://*.${domain}/*`);
+      }
+
+      const configuredOrigins =
+        this.configService.get<string>('ALLOWED_ORIGINS');
+      if (configuredOrigins) {
+        for (const origin of configuredOrigins
+          .split(',')
+          .map((o) => o.trim())) {
+          if (origin) {
+            allowedOrigins.push(origin);
+            redirectUris.push(
+              origin.endsWith('/') ? `${origin}*` : `${origin}/*`,
+            );
+          }
+        }
+      } else {
+        // Safe fallback for local development environments
+        allowedOrigins.push('http://localhost:3000', 'http://localhost:3002');
+        redirectUris.push('http://localhost:3000/*', 'http://localhost:3002/*');
+      }
+
+      const postLogoutRedirectUris = redirectUris.join('##');
+
       await this.kcAdminClient.clients.create({
         realm: realmName,
         clientId: targetClientId,
@@ -180,11 +211,11 @@ export class KeycloakService {
         publicClient: true,
         directAccessGrantsEnabled: true,
         standardFlowEnabled: true,
-        redirectUris: ['*'],
-        webOrigins: ['*'],
+        redirectUris,
+        webOrigins: allowedOrigins,
         attributes: {
           'pkce.code.challenge.method': 'S256',
-          'post.logout.redirect.uris': '*',
+          'post.logout.redirect.uris': postLogoutRedirectUris,
         },
       });
 

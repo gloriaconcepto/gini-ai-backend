@@ -40,6 +40,18 @@ variable "keycloak_admin_client_secret" {
   description = "Keycloak confidential client secret for Gateway administrative access."
 }
 
+variable "keycloak_admin_username" {
+  type        = string
+  default     = "admin"
+  description = "Keycloak initial master administrator username."
+}
+
+variable "keycloak_admin_password" {
+  type        = string
+  sensitive   = true
+  description = "Keycloak initial master administrator password."
+}
+
 variable "enable_scale_to_zero" {
   type        = bool
   default     = true

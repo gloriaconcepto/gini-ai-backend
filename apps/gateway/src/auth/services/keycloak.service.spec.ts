@@ -296,7 +296,7 @@ describe('KeycloakService', () => {
       ]);
       expect(createdRoleNames).toContain('admin');
 
-      // Verify client creation with custom client ID
+      // Verify client creation with custom client ID and secure non-wildcard redirect URIs
       expect(mockClientsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           realm: `tenant-${tenantId}`,
@@ -304,8 +304,13 @@ describe('KeycloakService', () => {
           publicClient: true,
           directAccessGrantsEnabled: true,
           standardFlowEnabled: true,
+          redirectUris: expect.arrayContaining(['https://acme.com/*']),
+          webOrigins: expect.arrayContaining(['https://acme.com']),
         }),
       );
+      const passedClientArgs = mockClientsCreate.mock.calls[0][0];
+      expect(passedClientArgs.redirectUris).not.toContain('*');
+      expect(passedClientArgs.webOrigins).not.toContain('*');
 
       // Verify default Maker user creation & role mapping (maker + admin)
       expect(mockUsersCreate).toHaveBeenNthCalledWith(
