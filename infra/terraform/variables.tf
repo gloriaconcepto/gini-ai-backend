@@ -57,3 +57,9 @@ variable "enable_scale_to_zero" {
   default     = true
   description = "Whether to allow container apps to scale down to 0 replicas when idle (cost-saving for dev/staging)."
 }
+
+variable "cors_origins" {
+  type        = string
+  default     = ""
+  description = "Comma-separated list of allowed CORS origins for API Gateway. If empty, automatically populated from frontend container apps."
+}

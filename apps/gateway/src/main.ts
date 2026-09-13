@@ -16,7 +16,7 @@ async function bootstrap() {
   const configuredCorsOrigins = corsOriginsEnv
     ? corsOriginsEnv
         .split(',')
-        .map((o) => o.trim())
+        .map((o) => o.trim().replace(/\/+$/, ''))
         .filter(Boolean)
     : [];
 
@@ -27,12 +27,15 @@ async function bootstrap() {
     if (!requestOrigin) {
       return callback(null, true);
     }
-    if (configuredCorsOrigins.includes(requestOrigin)) {
+    const normalizedOrigin = requestOrigin.replace(/\/+$/, '');
+    if (configuredCorsOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
     if (process.env.NODE_ENV !== 'production') {
       const isLocalhost =
-        /^https?:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(requestOrigin);
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(
+          normalizedOrigin,
+        );
       if (isLocalhost) {
         return callback(null, true);
       }

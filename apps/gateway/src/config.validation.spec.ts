@@ -28,6 +28,21 @@ describe('Config Validation', () => {
     expect(() => validate(rawConfig)).toThrow();
   });
 
+  it('should validate optional CORS and portal URLs correctly', () => {
+    const rawConfig = {
+      CORS_ORIGINS: 'https://app.gini.ai',
+      ALLOWED_ORIGINS: 'https://app.gini.ai,https://admin.gini.ai',
+      OEM_BACKOFFICE_URL: 'https://admin.gini.ai',
+      ENTERPRISE_PORTAL_URL: 'https://app.gini.ai',
+    };
+
+    const validated = validate(rawConfig);
+    expect(validated.CORS_ORIGINS).toBe('https://app.gini.ai');
+    expect(validated.ALLOWED_ORIGINS).toBe('https://app.gini.ai,https://admin.gini.ai');
+    expect(validated.OEM_BACKOFFICE_URL).toBe('https://admin.gini.ai');
+    expect(validated.ENTERPRISE_PORTAL_URL).toBe('https://app.gini.ai');
+  });
+
   it('should export validateConfig as an alias of validate', () => {
     expect(validateConfig).toBe(validate);
   });
