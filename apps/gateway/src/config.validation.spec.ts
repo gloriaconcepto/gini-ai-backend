@@ -38,7 +38,9 @@ describe('Config Validation', () => {
 
     const validated = validate(rawConfig);
     expect(validated.CORS_ORIGINS).toBe('https://app.gini.ai');
-    expect(validated.ALLOWED_ORIGINS).toBe('https://app.gini.ai,https://admin.gini.ai');
+    expect(validated.ALLOWED_ORIGINS).toBe(
+      'https://app.gini.ai,https://admin.gini.ai',
+    );
     expect(validated.OEM_BACKOFFICE_URL).toBe('https://admin.gini.ai');
     expect(validated.ENTERPRISE_PORTAL_URL).toBe('https://app.gini.ai');
   });

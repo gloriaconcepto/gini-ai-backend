@@ -16,7 +16,7 @@
       "description": "Confidential client for Gateway administrative access and multi-tenant management",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "secret": "2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3",
+      "secret": "${env.KEYCLOAK_ADMIN_CLIENT_SECRET:2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3}",
       "bearerOnly": false,
       "consentRequired": false,
       "standardFlowEnabled": false,
@@ -60,7 +60,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "admin",
+          "value": "${env.KEYCLOAK_ADMIN_PASSWORD:admin}",
           "temporary": false
         }
       ],

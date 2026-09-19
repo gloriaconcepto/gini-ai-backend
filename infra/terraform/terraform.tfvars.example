@@ -1,0 +1,19 @@
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and supply the necessary credentials,
+# or provide them via TF_VAR_<variable_name> environment variables.
+
+project_name = "gini-ai"
+environment  = "dev"
+location     = "westus"
+
+# Sensitive variables (can be retrieved from Azure Key Vault or CI/CD secrets)
+db_admin_username            = "pgadmin"
+db_admin_password            = "ReplaceWithSecurePassword123!"
+keycloak_admin_username      = "admin"
+keycloak_admin_password      = "ReplaceWithSecureAdminPassword123!"
+keycloak_admin_client_id     = "gini-gateway-service"
+keycloak_admin_client_secret = "ReplaceWithSecureClientSecret123!"
+
+# Optional overrides
+enable_scale_to_zero = true
+# cors_origins       = "https://portal.example.com,https://backoffice.example.com"
