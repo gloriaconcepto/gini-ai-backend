@@ -1,36 +1,54 @@
 #!/bin/sh
 set -e
+KEYCLOAK_URL=${KEYCLOAK_URL:-"http://keycloak:8080"}
+KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-"admin"}
+KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-"admin"}
+KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-"gini-gateway-service"}
+OEM_BACKOFFICE_URL=${OEM_BACKOFFICE_URL:-"http://localhost:3002"}
 
-echo "Waiting for Keycloak to be ready..."
-until /opt/keycloak/bin/kcadm.sh config credentials --server http://keycloak:8080 --realm master --user admin --password admin; do
+# Generate secure random secret if not supplied in environment
+generate_fallback_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 32
+  elif [ -r /dev/urandom ]; then
+    LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 32
+  else
+    echo "2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3"
+  fi
+}
+
+KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET:-$(generate_fallback_secret)}
+
+echo "Waiting for Keycloak to be ready at ${KEYCLOAK_URL}..."
+until /opt/keycloak/bin/kcadm.sh config credentials --server "${KEYCLOAK_URL}" --realm master --user "${KEYCLOAK_ADMIN}" --password "${KEYCLOAK_ADMIN_PASSWORD}"; do
   sleep 2
 done
 
 echo "Keycloak is ready. Configuring master realm admin user and service account..."
 
 # Ensure admin user has admin realm role
-/opt/keycloak/bin/kcadm.sh add-roles -r master --uusername admin --rolename admin || true
+/opt/keycloak/bin/kcadm.sh add-roles -r master --uusername "${KEYCLOAK_ADMIN}" --rolename admin || true
 
-# Check/create gini-gateway-service client
-if /opt/keycloak/bin/kcadm.sh get clients -r master -q clientId=gini-gateway-service | grep -q 'gini-gateway-service'; then
-  echo "Client gini-gateway-service already exists."
+# Check/create gateway client
+if /opt/keycloak/bin/kcadm.sh get clients -r master -q clientId="${KEYCLOAK_ADMIN_CLIENT_ID}" | grep -q "${KEYCLOAK_ADMIN_CLIENT_ID}"; then
+  echo "Client ${KEYCLOAK_ADMIN_CLIENT_ID} already exists."
 else
-  echo "Creating client gini-gateway-service with service account..."
+  echo "Creating client ${KEYCLOAK_ADMIN_CLIENT_ID} with service account..."
   /opt/keycloak/bin/kcadm.sh create clients -r master \
-    -s clientId=gini-gateway-service \
+    -s clientId="${KEYCLOAK_ADMIN_CLIENT_ID}" \
     -s "name=Gini AI Gateway Service" \
     -s enabled=true \
     -s clientAuthenticatorType=client-secret \
-    -s secret=2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3 \
+    -s secret="${KEYCLOAK_ADMIN_CLIENT_SECRET}" \
     -s serviceAccountsEnabled=true \
     -s publicClient=false \
     -s standardFlowEnabled=false \
     -s directAccessGrantsEnabled=false
 fi
 
-echo "Assigning full master administrative roles to service-account-gini-gateway-service..."
-/opt/keycloak/bin/kcadm.sh add-roles -r master --uusername service-account-gini-gateway-service --rolename admin || true
-/opt/keycloak/bin/kcadm.sh add-roles -r master --uusername service-account-gini-gateway-service --cclientid master-realm \
+echo "Assigning full master administrative roles to service-account-${KEYCLOAK_ADMIN_CLIENT_ID}..."
+/opt/keycloak/bin/kcadm.sh add-roles -r master --uusername "service-account-${KEYCLOAK_ADMIN_CLIENT_ID}" --rolename admin || true
+/opt/keycloak/bin/kcadm.sh add-roles -r master --uusername "service-account-${KEYCLOAK_ADMIN_CLIENT_ID}" --cclientid master-realm \
   --rolename manage-realm \
   --rolename manage-users \
   --rolename manage-clients \
@@ -45,7 +63,7 @@ echo "Assigning full master administrative roles to service-account-gini-gateway
   --rolename query-groups \
   --rolename query-clients || true
 
-echo "gini-gateway-service client provisioned and fully authorized!"
+echo "${KEYCLOAK_ADMIN_CLIENT_ID} client provisioned and fully authorized!"
 
 # Check/create/update @gini/oem-backoffice client
 OEM_CLIENT_ID=$(/opt/keycloak/bin/kcadm.sh get clients -r master -q clientId="@gini/oem-backoffice" --fields id --format csv --noquotes 2>/dev/null || true)
@@ -58,11 +76,11 @@ if [ -n "$OEM_CLIENT_ID" ]; then
     -s publicClient=true \
     -s standardFlowEnabled=true \
     -s directAccessGrantsEnabled=true \
-    -s 'rootUrl=http://localhost:3002' \
-    -s 'baseUrl=http://localhost:3002' \
-    -s 'redirectUris=["http://localhost:3002/*"]' \
-    -s 'webOrigins=["http://localhost:3002","+"]' \
-    -s 'attributes={"pkce.code.challenge.method":"S256","post.logout.redirect.uris":"http://localhost:3002/*##+"}'
+    -s "rootUrl=${OEM_BACKOFFICE_URL}" \
+    -s "baseUrl=${OEM_BACKOFFICE_URL}" \
+    -s "redirectUris=[\"${OEM_BACKOFFICE_URL}/*\"]" \
+    -s "webOrigins=[\"${OEM_BACKOFFICE_URL}\",\"+\"]" \
+    -s "attributes={\"pkce.code.challenge.method\":\"S256\",\"post.logout.redirect.uris\":\"${OEM_BACKOFFICE_URL}/*##+\"}"
 else
   echo "Creating public SPA client @gini/oem-backoffice..."
   /opt/keycloak/bin/kcadm.sh create clients -r master \
@@ -72,11 +90,12 @@ else
     -s publicClient=true \
     -s standardFlowEnabled=true \
     -s directAccessGrantsEnabled=true \
-    -s 'rootUrl=http://localhost:3002' \
-    -s 'baseUrl=http://localhost:3002' \
-    -s 'redirectUris=["http://localhost:3002/*"]' \
-    -s 'webOrigins=["http://localhost:3002","+"]' \
-    -s 'attributes={"pkce.code.challenge.method":"S256","post.logout.redirect.uris":"http://localhost:3002/*##+"}'
+    -s "rootUrl=${OEM_BACKOFFICE_URL}" \
+    -s "baseUrl=${OEM_BACKOFFICE_URL}" \
+    -s "redirectUris=[\"${OEM_BACKOFFICE_URL}/*\"]" \
+    -s "webOrigins=[\"${OEM_BACKOFFICE_URL}\",\"+\"]" \
+    -s "attributes={\"pkce.code.challenge.method\":\"S256\",\"post.logout.redirect.uris\":\"${OEM_BACKOFFICE_URL}/*##+\"}"
 fi
 
 echo "Keycloak master realm provisioning complete!"
+

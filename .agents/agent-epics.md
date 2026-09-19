@@ -135,11 +135,11 @@ This document serves as the single source of truth for agents to understand the 
   - [x] Implement dynamic client resolution in `TenantDomainService.resolveDomain` (read `realm.attributes.clientId`, fallback to inspecting public SPA clients via `KeycloakService.listClients`, eliminating hardcoded `'gini-frontend'`).
   - [x] Expose `clientId` in `TenantWorkspaceResponseDto` (`GET /tenant/workspace`) for consistent post-login workspace client details.
   - [x] Update unit tests across `tenant-domain.service.spec.ts`, `keycloak.service.spec.ts`, and `tenant.controller.spec.ts`.
-- [ ] **Secret Sanitization & Environment Externalization (P1)**:
-  - [ ] Remove committed plaintext secrets from `infra/terraform/terraform.tfvars` and `.env.remote`.
-  - [ ] Externalize seed secrets in `infra/keycloak/master-realm.json`, `scripts/init-keycloak.sh`, and `scripts/bootstrap-keycloak.sh` to consume environment variables with secure fallback generation.
-  - [ ] Standardize environment variable casing: replace `process.env.port` with `process.env.PORT` across `apps/gateway/src/main.ts` and `apps/workers/src/main.ts`.
-  - [ ] Disambiguate default worker service port (assign distinct default `PORT=3001` for workers to prevent port collision with gateway on `3000`).
+- [x] **Secret Sanitization & Environment Externalization (P1)**:
+  - [x] Remove committed plaintext secrets from `infra/terraform/terraform.tfvars` and `.env.remote`.
+  - [x] Externalize seed secrets in `infra/keycloak/master-realm.json`, `scripts/init-keycloak.sh`, and `scripts/bootstrap-keycloak.sh` to consume environment variables with secure fallback generation.
+  - [x] Standardize environment variable casing: replace `process.env.port` with `process.env.PORT` across `apps/gateway/src/main.ts` and `apps/workers/src/main.ts`.
+  - [x] Disambiguate default worker service port (assign distinct default `PORT=3001` for workers to prevent port collision with gateway on `3000`).
 - [ ] **Codebase Magic Numbers & Constants Cleanup (P2)**:
   - [ ] Refactor magic numbers (`65536` max header size, `jwksRequestsPerMinute: 10`, `export limit: 5000`, API key entropy/prefix lengths) into centralized constants or configuration values.
   - [ ] Centralize hardcoded realm conventions (`tenant-` prefix, `/realms/master`, `gini-frontend`, `gini-theme`) into unified configuration tokens.

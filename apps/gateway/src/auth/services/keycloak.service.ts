@@ -127,7 +127,8 @@ export class KeycloakService {
       await this.authenticate();
 
       const realmName = `tenant-${tenantId}`;
-      const targetClientId = clientId || attributes?.clientId || 'gini-frontend';
+      const targetClientId =
+        clientId || attributes?.clientId || 'gini-frontend';
 
       // 1. Create the new tenant realm (persist clientId into attributes for dynamic resolution)
       await this.kcAdminClient.realms.create({

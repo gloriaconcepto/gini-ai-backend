@@ -24,8 +24,9 @@ services:
       KC_DB_URL: jdbc:postgresql://postgres:5432/ginidb
       KC_DB_USERNAME: pgadmin
       KC_DB_PASSWORD: your_secure_password
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3}
     volumes:
       - ./infra/keycloak/master-realm.json:/opt/keycloak/data/import/master-realm.json:ro
       - ./dist_keycloak/keycloak-theme-for-kc-22-to-25.jar:/opt/keycloak/providers/gini-theme.jar:ro
@@ -39,6 +40,13 @@ services:
   keycloak-init:
     image: quay.io/keycloak/keycloak:24.0.0
     container_name: gini_keycloak_init
+    environment:
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-gini-gateway-service}
+      - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET:-2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3}
+      - OEM_BACKOFFICE_URL=${OEM_BACKOFFICE_URL:-http://localhost:3002}
     depends_on:
       - keycloak
     volumes:
