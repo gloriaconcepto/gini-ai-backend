@@ -178,7 +178,7 @@ resource "aws_route_table_association" "search" {
 # 2. SECURITY GROUPS
 # -----------------------------------------------------------------------------
 resource "aws_security_group" "alb" {
-  name        = "sg-alb-${var.environment}"
+  name        = "${var.project_name}-alb-sg-${var.environment}"
   description = "Controls HTTP/HTTPS ingress to Application Load Balancer"
   vpc_id      = aws_vpc.main.id
 
@@ -207,12 +207,12 @@ resource "aws_security_group" "alb" {
   }
 
   tags = {
-    Name = "sg-alb-${var.environment}"
+    Name = "${var.project_name}-alb-sg-${var.environment}"
   }
 }
 
 resource "aws_security_group" "ecs" {
-  name        = "sg-ecs-tasks-${var.environment}"
+  name        = "${var.project_name}-ecs-tasks-sg-${var.environment}"
   description = "Controls ingress to ECS Fargate tasks from ALB and within cluster"
   vpc_id      = aws_vpc.main.id
 
@@ -248,12 +248,12 @@ resource "aws_security_group" "ecs" {
   }
 
   tags = {
-    Name = "sg-ecs-tasks-${var.environment}"
+    Name = "${var.project_name}-ecs-tasks-sg-${var.environment}"
   }
 }
 
 resource "aws_security_group" "rds" {
-  name        = "sg-rds-${var.environment}"
+  name        = "${var.project_name}-rds-sg-${var.environment}"
   description = "Controls database access from ECS Fargate tasks"
   vpc_id      = aws_vpc.main.id
 
@@ -273,12 +273,12 @@ resource "aws_security_group" "rds" {
   }
 
   tags = {
-    Name = "sg-rds-${var.environment}"
+    Name = "${var.project_name}-rds-sg-${var.environment}"
   }
 }
 
 resource "aws_security_group" "redis" {
-  name        = "sg-redis-${var.environment}"
+  name        = "${var.project_name}-redis-sg-${var.environment}"
   description = "Controls ElastiCache Redis access from ECS tasks"
   vpc_id      = aws_vpc.main.id
 
@@ -298,7 +298,7 @@ resource "aws_security_group" "redis" {
   }
 
   tags = {
-    Name = "sg-redis-${var.environment}"
+    Name = "${var.project_name}-redis-sg-${var.environment}"
   }
 }
 

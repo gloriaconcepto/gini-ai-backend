@@ -7,7 +7,7 @@
 # =============================================================================
 
 resource "aws_security_group" "opensearch" {
-  name        = "sg-opensearch-${var.environment}"
+  name        = "${var.project_name}-opensearch-sg-${var.environment}"
   description = "Controls HTTPS access to OpenSearch domain from ECS tasks and SageMaker"
   vpc_id      = aws_vpc.main.id
 
@@ -27,7 +27,7 @@ resource "aws_security_group" "opensearch" {
   }
 
   tags = {
-    Name = "sg-opensearch-${var.environment}"
+    Name = "${var.project_name}-opensearch-sg-${var.environment}"
   }
 }
 
