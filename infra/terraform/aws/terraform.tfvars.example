@@ -1,0 +1,28 @@
+# Example AWS Terraform variables
+aws_region                       = "us-east-1"
+project_name                     = "gini-ai"
+environment                      = "dev"
+vpc_cidr                         = "10.0.0.0/16"
+
+# Master Database Credentials
+db_admin_username                = "pgadmin"
+db_admin_password                = "ReplaceWithSecurePassword123!"
+
+# Keycloak Credentials
+keycloak_admin_username          = "admin"
+keycloak_admin_password          = "ReplaceWithSecurePassword123!"
+keycloak_admin_client_secret     = "ReplaceWithSecureClientSecret123!"
+
+# OpenSearch Configuration (Managed Cluster with EBS Storage for Dev/Staging cost control)
+opensearch_instance_type         = "t3.medium.search"
+opensearch_instance_count        = 2
+opensearch_ebs_volume_size       = 20
+
+# SageMaker Real-Time Endpoint Configuration
+sagemaker_llm_instance_type       = "ml.g5.2xlarge"
+sagemaker_llm_instance_count      = 1
+sagemaker_embedding_instance_type = "ml.g5.xlarge"
+sagemaker_embedding_instance_count = 1
+
+# Optional CORS Origins
+cors_origins                     = "https://portal.gini.ai,https://admin.gini.ai"

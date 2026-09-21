@@ -23,9 +23,15 @@
     "keycloak:bootstrap": "bash scripts/bootstrap-keycloak.sh",
     "azure:status": "bash scripts/azure-power.sh status",
     "azure:stop": "bash scripts/azure-power.sh stop",
-    "azure:start": "bash scripts/azure-power.sh start"
+    "azure:start": "bash scripts/azure-power.sh start",
+    "aws:status": "bash scripts/aws-power.sh status",
+    "aws:stop": "bash scripts/aws-power.sh stop",
+    "aws:start": "bash scripts/aws-power.sh start"
   },
   "dependencies": {
+    "@aws-sdk/client-sagemaker": "^3.1136.0",
+    "@aws-sdk/client-sagemaker-runtime": "^3.1136.0",
+    "@aws-sdk/credential-provider-node": "^3.972.83",
     "@keycloak/keycloak-admin-client": "^26.7.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
@@ -33,6 +39,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.7",
+    "@opensearch-project/opensearch": "^3.6.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "jsonwebtoken": "^9.0.3",

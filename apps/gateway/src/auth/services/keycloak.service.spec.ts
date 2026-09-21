@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { NotFoundException } from '@nestjs/common';
 import { KeycloakService } from './keycloak.service';
+import { getTenantRealmName } from '../constants/auth.constants';
 
 const mockSetAccessToken = jest.fn();
 const mockIsTokenExpired = jest.fn().mockReturnValue(true);
@@ -411,7 +412,7 @@ describe('KeycloakService', () => {
       expect(mockUsersCreate).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
-          realm: `tenant-${tenantId}`,
+          realm: getTenantRealmName(tenantId),
           username: maker.email,
           email: maker.email,
           firstName: 'Maker',
@@ -421,7 +422,7 @@ describe('KeycloakService', () => {
       expect(mockUsersCreate).toHaveBeenNthCalledWith(
         2,
         expect.objectContaining({
-          realm: `tenant-${tenantId}`,
+          realm: getTenantRealmName(tenantId),
           username: checker.email,
           email: checker.email,
           firstName: 'Checker',
@@ -453,7 +454,7 @@ describe('KeycloakService', () => {
 
       expect(mockRealmsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          realm: `tenant-${tenantId}`,
+          realm: getTenantRealmName(tenantId),
           attributes: {
             clientId: 'gini-frontend',
           },
@@ -461,7 +462,7 @@ describe('KeycloakService', () => {
       );
       expect(mockClientsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          realm: `tenant-${tenantId}`,
+          realm: getTenantRealmName(tenantId),
           clientId: 'gini-frontend',
         }),
       );
@@ -496,11 +497,11 @@ describe('KeycloakService', () => {
       const result = await service.getUserById(tenantId, userId);
 
       expect(mockUsersFindOne).toHaveBeenCalledWith({
-        realm: `tenant-${tenantId}`,
+        realm: getTenantRealmName(tenantId),
         id: userId,
       });
       expect(mockUsersListRealmRoleMappings).toHaveBeenCalledWith({
-        realm: `tenant-${tenantId}`,
+        realm: getTenantRealmName(tenantId),
         id: userId,
       });
       expect(result).toEqual({
