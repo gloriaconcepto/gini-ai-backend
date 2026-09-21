@@ -7,6 +7,7 @@ import {
 
 import { Request } from 'express';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
+import { isMasterRealmIssuer, ROLE_NAMES } from '../constants/auth.constants';
 
 @Injectable()
 export class MasterAdminGuard implements CanActivate {
@@ -19,7 +20,7 @@ export class MasterAdminGuard implements CanActivate {
     }
 
     // Must belong to the master realm
-    if (!user.issuer || !user.issuer.endsWith('/realms/master')) {
+    if (!isMasterRealmIssuer(user.issuer)) {
       throw new ForbiddenException(
         'Access denied: Requires Keycloak Master Realm administrator privileges',
       );
@@ -28,9 +29,7 @@ export class MasterAdminGuard implements CanActivate {
     // Must have the master realm's admin role
     const isMasterAdmin =
       user.roles &&
-      (user.roles.includes('admin') ||
-        user.roles.includes('realm-admin') ||
-        user.roles.includes('manage-realm'));
+      ROLE_NAMES.MASTER_ADMIN_ROLES.some((role) => user.roles.includes(role));
 
     if (!isMasterAdmin) {
       throw new ForbiddenException(

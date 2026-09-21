@@ -8,6 +8,7 @@ import {
 } from '../audit.types';
 import { InMemoryAuditStorageAdapter } from '../adapters/in-memory-audit-storage.adapter';
 import { AuditMaskingService } from './audit-masking.service';
+import { AUDIT_CONFIG } from '../constants/audit.constants';
 
 @Injectable()
 export class AuditService {
@@ -107,11 +108,11 @@ export class AuditService {
     filter: AuditFilter,
     format: 'json' | 'csv' = 'json',
   ): Promise<string> {
-    // Export up to 5,000 logs matching the filter
+    // Export up to DEFAULT_EXPORT_LIMIT logs matching the filter
     const exportFilter: AuditFilter = {
       ...filter,
-      page: 1,
-      limit: 5000,
+      page: AUDIT_CONFIG.DEFAULT_PAGE,
+      limit: AUDIT_CONFIG.DEFAULT_EXPORT_LIMIT,
     };
 
     const paginated = await this.queryLogs(exportFilter);

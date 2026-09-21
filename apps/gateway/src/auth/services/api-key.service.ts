@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes, randomUUID, createHash } from 'crypto';
+import { API_KEY_CONFIG } from '../constants/auth.constants';
 
 export interface ApiKeyRecord {
   id: string;
@@ -36,14 +37,14 @@ export class ApiKeyService {
     expiresInDays?: number,
   ): Promise<CreatedApiKeyResult> {
     const id = randomUUID();
-    const secret = randomBytes(24).toString('hex');
-    const rawKey = `gk_${secret}`;
-    const keyPrefix = rawKey.substring(0, 7);
+    const secret = randomBytes(API_KEY_CONFIG.ENTROPY_BYTES).toString('hex');
+    const rawKey = `${API_KEY_CONFIG.PREFIX}${secret}`;
+    const keyPrefix = rawKey.substring(0, API_KEY_CONFIG.PREFIX_DISPLAY_LENGTH);
     const hashedKey = this.hashKey(rawKey);
 
     const now = new Date();
     const expiresAt = expiresInDays
-      ? new Date(now.getTime() + expiresInDays * 24 * 60 * 60 * 1000)
+      ? new Date(now.getTime() + expiresInDays * API_KEY_CONFIG.MS_PER_DAY)
       : undefined;
 
     const record: ApiKeyRecord = {
@@ -98,7 +99,7 @@ export class ApiKeyService {
   async validateApiKey(
     rawKey: string,
   ): Promise<{ valid: boolean; record?: ApiKeyRecord }> {
-    if (!rawKey || !rawKey.startsWith('gk_')) {
+    if (!rawKey || !rawKey.startsWith(API_KEY_CONFIG.PREFIX)) {
       return { valid: false };
     }
 

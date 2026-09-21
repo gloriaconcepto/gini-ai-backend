@@ -27,6 +27,7 @@ import {
   AuditLogResponseDto,
 } from '../dto/audit.dtos';
 import { AuthenticatedUser } from '../../auth/strategies/jwt.strategy';
+import { isMasterRealmIssuer } from '../../auth/constants/auth.constants';
 
 @ApiTags('Audit')
 @ApiBearerAuth()
@@ -155,9 +156,7 @@ export class AuditController {
     req: Request & { user?: AuthenticatedUser },
   ): string | undefined {
     const user = req.user;
-    const isMasterAdmin =
-      user?.issuer?.endsWith('/realms/master') ||
-      user?.issuer?.includes('/master');
+    const isMasterAdmin = isMasterRealmIssuer(user?.issuer);
 
     if (isMasterAdmin) {
       return undefined; // All tenants accessible

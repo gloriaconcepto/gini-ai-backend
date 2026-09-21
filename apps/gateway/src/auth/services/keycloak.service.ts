@@ -31,6 +31,11 @@ import {
   SyncGroupTreeItemDto,
 } from '../dto/iam-idp-mapper.dtos';
 import { CreateTenantResponseDto } from '../dto/create-tenant.dto';
+import {
+  KEYCLOAK_CONFIG,
+  getTenantRealmName,
+  isTenantRealm,
+} from '../constants/auth.constants';
 
 export interface ProvisionUserCredentials {
   email: string;
@@ -52,7 +57,7 @@ export class KeycloakService {
         .trim(),
       realmName: this.configService.get<string>(
         'KEYCLOAK_ADMIN_REALM',
-        'master',
+        KEYCLOAK_CONFIG.MASTER_REALM,
       ),
     });
   }
@@ -81,7 +86,7 @@ export class KeycloakService {
       if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1);
       const realmName = this.configService.get<string>(
         'KEYCLOAK_ADMIN_REALM',
-        'master',
+        KEYCLOAK_CONFIG.MASTER_REALM,
       );
       const tokenUrl = `${baseUrl}/realms/${realmName}/protocol/openid-connect/token`;
 
@@ -126,19 +131,19 @@ export class KeycloakService {
     try {
       await this.authenticate();
 
-      const realmName = `tenant-${tenantId}`;
+      const realmName = getTenantRealmName(tenantId);
       const targetClientId =
-        clientId || attributes?.clientId || 'gini-frontend';
+        clientId || attributes?.clientId || KEYCLOAK_CONFIG.DEFAULT_CLIENT_ID;
 
       // 1. Create the new tenant realm (persist clientId into attributes for dynamic resolution)
       await this.kcAdminClient.realms.create({
         realm: realmName,
         displayName: tenantName,
         enabled: true,
-        loginTheme: 'gini-theme',
-        accountTheme: 'gini-theme',
-        adminTheme: 'gini-theme',
-        emailTheme: 'gini-theme',
+        loginTheme: KEYCLOAK_CONFIG.DEFAULT_THEME,
+        accountTheme: KEYCLOAK_CONFIG.DEFAULT_THEME,
+        adminTheme: KEYCLOAK_CONFIG.DEFAULT_THEME,
+        emailTheme: KEYCLOAK_CONFIG.DEFAULT_THEME,
         attributes: {
           ...(attributes || {}),
           clientId: targetClientId,
@@ -364,12 +369,12 @@ export class KeycloakService {
 
   async getUsers(tenantId: string) {
     await this.authenticate();
-    return this.kcAdminClient.users.find({ realm: `tenant-${tenantId}` });
+    return this.kcAdminClient.users.find({ realm: getTenantRealmName(tenantId) });
   }
 
   async getUserById(tenantId: string, userId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const [user, roleMappings] = await Promise.all([
         this.kcAdminClient.users.findOne({
@@ -409,7 +414,7 @@ export class KeycloakService {
 
   async createUser(tenantId: string, dto: CreateIamUserDto) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     const user = await this.kcAdminClient.users.create({
       realm,
       username: dto.username,
@@ -432,7 +437,7 @@ export class KeycloakService {
 
   async updateUser(tenantId: string, userId: string, dto: UpdateIamUserDto) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.users.update(
         { realm, id: userId },
@@ -451,7 +456,7 @@ export class KeycloakService {
 
   async deleteUser(tenantId: string, userId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.users.del({ realm, id: userId });
       return { success: true, userId };
@@ -466,7 +471,7 @@ export class KeycloakService {
     dto: ResetPasswordDto,
   ) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.users.resetPassword({
         realm,
@@ -485,7 +490,7 @@ export class KeycloakService {
 
   async getUserRoles(tenantId: string, userId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       return await this.kcAdminClient.users.listRealmRoleMappings({
         realm,
@@ -498,7 +503,7 @@ export class KeycloakService {
 
   async removeRoleFromUser(tenantId: string, userId: string, roleName: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     const role = await this.kcAdminClient.roles.findOneByName({
       realm,
       name: roleName,
@@ -522,14 +527,15 @@ export class KeycloakService {
 
   async listRoles(tenantId: string) {
     await this.authenticate();
-    return this.kcAdminClient.roles.find({ realm: `tenant-${tenantId}` });
+    return this.kcAdminClient.roles.find({ realm: getTenantRealmName(tenantId) });
   }
 
   async createRole(tenantId: string, dto: CreateIamRoleDto) {
     await this.authenticate();
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.roles.create({
-        realm: `tenant-${tenantId}`,
+        realm,
         name: dto.name,
         description: dto.description,
       });
@@ -537,14 +543,14 @@ export class KeycloakService {
     } catch (error) {
       this.handleKeycloakError(
         error,
-        `Tenant realm tenant-${tenantId} not found`,
+        `Tenant realm ${realm} not found`,
       );
     }
   }
 
   async deleteRole(tenantId: string, roleName: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.roles.delByName({
         realm,
@@ -558,7 +564,7 @@ export class KeycloakService {
 
   async assignRoleToUser(tenantId: string, userId: string, roleName: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     const role = await this.kcAdminClient.roles.findOneByName({
       realm,
       name: roleName,
@@ -582,12 +588,12 @@ export class KeycloakService {
 
   async listClients(tenantId: string) {
     await this.authenticate();
-    return this.kcAdminClient.clients.find({ realm: `tenant-${tenantId}` });
+    return this.kcAdminClient.clients.find({ realm: getTenantRealmName(tenantId) });
   }
 
   async createClient(tenantId: string, dto: CreateIamClientDto) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const client = await this.kcAdminClient.clients.create({
         realm,
@@ -605,7 +611,7 @@ export class KeycloakService {
 
   async getClientSecret(tenantId: string, clientDbId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       return await this.kcAdminClient.clients.getClientSecret({
         realm,
@@ -618,7 +624,7 @@ export class KeycloakService {
 
   async deleteClient(tenantId: string, clientDbId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.clients.del({
         realm,
@@ -641,7 +647,7 @@ export class KeycloakService {
 
   async createIdentityProvider(tenantId: string, dto: CreateIdpDto) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.identityProviders.create({
         realm,
@@ -661,7 +667,7 @@ export class KeycloakService {
     dto: UpdateIdpDto,
   ) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.identityProviders.update(
         { realm, alias },
@@ -679,7 +685,7 @@ export class KeycloakService {
 
   async deleteIdentityProvider(tenantId: string, alias: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.identityProviders.del({
         realm,
@@ -695,7 +701,7 @@ export class KeycloakService {
 
   async listGroups(tenantId: string): Promise<IamGroupResponseDto[]> {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const groups = await this.kcAdminClient.groups.find({
         realm,
@@ -713,7 +719,7 @@ export class KeycloakService {
     groupId: string,
   ): Promise<IamGroupResponseDto> {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const group = await this.kcAdminClient.groups.findOne({
         realm,
@@ -752,7 +758,7 @@ export class KeycloakService {
 
   async createGroup(tenantId: string, dto: CreateIamGroupDto) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const created = await this.kcAdminClient.groups.create({
         realm,
@@ -785,7 +791,7 @@ export class KeycloakService {
     dto: CreateIamSubgroupDto,
   ) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const created = await this.kcAdminClient.groups.createChildGroup(
         { realm, id: parentGroupId },
@@ -810,7 +816,7 @@ export class KeycloakService {
 
   async updateGroup(tenantId: string, groupId: string, dto: UpdateIamGroupDto) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.groups.update(
         { realm, id: groupId },
@@ -829,7 +835,7 @@ export class KeycloakService {
 
   async deleteGroup(tenantId: string, groupId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.groups.del({ realm, id: groupId });
       return { success: true, id: groupId };
@@ -840,7 +846,7 @@ export class KeycloakService {
 
   async assignRoleToGroup(tenantId: string, groupId: string, roleName: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const role = await this.kcAdminClient.roles.findOneByName({
         realm,
@@ -871,7 +877,7 @@ export class KeycloakService {
     roleName: string,
   ) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const role = await this.kcAdminClient.roles.findOneByName({
         realm,
@@ -898,7 +904,7 @@ export class KeycloakService {
 
   async listGroupMembers(tenantId: string, groupId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const members = await this.kcAdminClient.groups.listMembers({
         realm,
@@ -914,7 +920,7 @@ export class KeycloakService {
 
   async getUserGroups(tenantId: string, userId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const groups = await this.kcAdminClient.users.listGroups({
         realm,
@@ -928,7 +934,7 @@ export class KeycloakService {
 
   async addUserToGroup(tenantId: string, userId: string, groupId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.users.addToGroup({
         realm,
@@ -946,7 +952,7 @@ export class KeycloakService {
 
   async removeUserFromGroup(tenantId: string, userId: string, groupId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.users.delFromGroup({
         realm,
@@ -966,7 +972,7 @@ export class KeycloakService {
 
   async listIdpMappers(tenantId: string, alias: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       return (
         (await this.kcAdminClient.identityProviders.findMappers({
@@ -985,7 +991,7 @@ export class KeycloakService {
     dto: CreateIdpMapperDto,
   ) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       const created = await this.kcAdminClient.identityProviders.createMapper({
         realm,
@@ -1005,7 +1011,7 @@ export class KeycloakService {
 
   async deleteIdpMapper(tenantId: string, alias: string, mapperId: string) {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     try {
       await this.kcAdminClient.identityProviders.delMapper({
         realm,
@@ -1029,7 +1035,7 @@ export class KeycloakService {
     dto?: SyncIdpHierarchyDto,
   ): Promise<SyncHierarchyResultDto> {
     await this.authenticate();
-    const realm = `tenant-${tenantId}`;
+    const realm = getTenantRealmName(tenantId);
     const details: string[] = [];
     let rolesCreated = 0;
     let groupsCreated = 0;
@@ -1279,9 +1285,7 @@ export class KeycloakService {
       throw new NotFoundException('Tenant identifier cannot be empty');
     }
 
-    const candidateName = identifier.startsWith('tenant-')
-      ? identifier
-      : `tenant-${identifier}`;
+    const candidateName = getTenantRealmName(identifier);
 
     // 1. Check if the realm exists directly by candidate realm name
     try {
@@ -1322,7 +1326,7 @@ export class KeycloakService {
   async listAllTenants() {
     await this.authenticate();
     const realms = await this.kcAdminClient.realms.find();
-    return realms.filter((r) => r.realm?.startsWith('tenant-'));
+    return realms.filter((r) => isTenantRealm(r.realm));
   }
 
   async getTenantDetails(tenantId: string) {

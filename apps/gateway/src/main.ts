@@ -2,13 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { GatewayModule } from './gateway.module';
+import { SERVER_CONFIG } from './common/constants/server.constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(GatewayModule);
 
   // Increase max HTTP header size on underlying HTTP server (default 16KB -> 64KB)
   const server = app.getHttpServer();
-  server.maxHeaderSize = 65536;
+  server.maxHeaderSize = SERVER_CONFIG.DEFAULT_MAX_HTTP_HEADER_SIZE;
 
   // Configure CORS with explicit origin validation (eliminating reflected origin vulnerability)
   const corsOriginsEnv =
@@ -76,7 +77,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? SERVER_CONFIG.DEFAULT_GATEWAY_PORT);
 }
 bootstrap().catch((err) => {
   console.error('Failed to start Gateway application', err);

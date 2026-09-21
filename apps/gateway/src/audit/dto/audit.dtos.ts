@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AuditActionCategory, AuditStatus } from '../audit.types';
+import { AUDIT_CONFIG } from '../constants/audit.constants';
 
 export class AuditQueryDto {
   @ApiPropertyOptional({
@@ -52,23 +53,26 @@ export class AuditQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Page number (1-indexed)', default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
   @ApiPropertyOptional({
-    description: 'Number of records per page (max 100)',
-    default: 20,
+    description: 'Page number (1-indexed)',
+    default: AUDIT_CONFIG.DEFAULT_PAGE,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
-  limit?: number = 20;
+  page?: number = AUDIT_CONFIG.DEFAULT_PAGE;
+
+  @ApiPropertyOptional({
+    description: `Number of records per page (max ${AUDIT_CONFIG.MAX_PAGE_SIZE})`,
+    default: AUDIT_CONFIG.DEFAULT_PAGE_SIZE,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(AUDIT_CONFIG.MAX_PAGE_SIZE)
+  limit?: number = AUDIT_CONFIG.DEFAULT_PAGE_SIZE;
 }
 
 export class AuditExportQueryDto {
