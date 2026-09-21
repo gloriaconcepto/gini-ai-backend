@@ -4,6 +4,10 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwksClient } from 'jwks-rsa';
 import * as jwt from 'jsonwebtoken';
 import { Request } from 'express';
+import {
+  JWKS_CONFIG,
+  extractTenantIdFromIssuer,
+} from '../constants/auth.constants';
 
 export interface KeycloakJwtPayload {
   iss: string;
@@ -66,9 +70,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
           let client = JwtStrategy.jwksClients.get(jwksUri);
           if (!client) {
             client = new JwksClient({
-              cache: true,
-              rateLimit: true,
-              jwksRequestsPerMinute: 10,
+              cache: JWKS_CONFIG.CACHE,
+              rateLimit: JWKS_CONFIG.RATE_LIMIT,
+              jwksRequestsPerMinute: JWKS_CONFIG.REQUESTS_PER_MINUTE,
               jwksUri,
             });
             JwtStrategy.jwksClients.set(jwksUri, client);
@@ -97,10 +101,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     let tenantId = payload.tenant_id;
     // Fallback: Extract tenantId from issuer url if not explicitly in custom claims
     if (!tenantId && payload.iss) {
-      const match = payload.iss.match(/\/realms\/tenant-([a-zA-Z0-9-]+)$/);
-      if (match) {
-        tenantId = match[1];
-      }
+      tenantId = extractTenantIdFromIssuer(payload.iss) ?? undefined;
     }
 
     const realmRoles = payload.realm_access?.roles || [];

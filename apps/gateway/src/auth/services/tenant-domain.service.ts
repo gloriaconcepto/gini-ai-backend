@@ -4,6 +4,11 @@ import { randomUUID } from 'crypto';
 import { KeycloakService } from './keycloak.service';
 import { TenantDomainMapping } from '../entities/tenant-domain.entity';
 import { TenantResolutionResponseDto } from '../dto/tenant-resolution.dto';
+import {
+  KEYCLOAK_CONFIG,
+  getTenantRealmName,
+  extractTenantIdFromRealm,
+} from '../constants/auth.constants';
 
 @Injectable()
 export class TenantDomainService {
@@ -46,8 +51,8 @@ export class TenantDomainService {
     tenantId: string,
     tenantName: string,
     domain: string,
-    clientId = 'gini-frontend',
-    loginTheme = 'gini-theme',
+    clientId: string = KEYCLOAK_CONFIG.DEFAULT_CLIENT_ID,
+    loginTheme: string = KEYCLOAK_CONFIG.DEFAULT_THEME,
   ): TenantDomainMapping {
     const normalizedDomain = this.normalizeDomain(domain);
     if (!normalizedDomain) {
@@ -62,7 +67,7 @@ export class TenantDomainService {
       domain: normalizedDomain,
       tenantId,
       tenantName,
-      realm: `tenant-${tenantId}`,
+      realm: getTenantRealmName(tenantId),
       clientId,
       loginTheme,
       createdAt: existing?.createdAt || now,
@@ -109,7 +114,7 @@ export class TenantDomainService {
       });
 
       if (matchedRealm && matchedRealm.realm) {
-        const tenantId = matchedRealm.realm.replace(/^tenant-/, '');
+        const tenantId = extractTenantIdFromRealm(matchedRealm.realm);
         const tenantName =
           matchedRealm.displayName || matchedRealm.realm || tenantId;
 
@@ -147,7 +152,10 @@ export class TenantDomainService {
         // 3. Fallback default
         resolvedClientId =
           resolvedClientId ||
-          this.configService.get<string>('DEFAULT_CLIENT_ID', 'gini-frontend');
+          this.configService.get<string>(
+            'DEFAULT_CLIENT_ID',
+            KEYCLOAK_CONFIG.DEFAULT_CLIENT_ID,
+          );
 
         // Auto-cache discovered realm in table for fast subsequent lookups
         const record = this.registerDomain(
@@ -155,7 +163,7 @@ export class TenantDomainService {
           tenantName,
           domain,
           resolvedClientId,
-          matchedRealm.loginTheme || 'gini-theme',
+          matchedRealm.loginTheme || KEYCLOAK_CONFIG.DEFAULT_THEME,
         );
 
         return this.toResponseDto(record);

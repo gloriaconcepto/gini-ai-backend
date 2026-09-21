@@ -7,6 +7,7 @@ import {
 import { Request } from 'express';
 import { ApiKeyService } from '../services/api-key.service';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
+import { API_KEY_CONFIG } from '../constants/auth.constants';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
@@ -17,11 +18,15 @@ export class ApiKeyGuard implements CanActivate {
       .switchToHttp()
       .getRequest<Request & { user?: AuthenticatedUser }>();
     const authHeader = request.headers['authorization'];
-    const apiKeyHeader = request.headers['x-api-key'] as string;
+    const apiKeyHeader = request.headers[API_KEY_CONFIG.HEADER_NAME] as string;
 
     let apiKey = apiKeyHeader;
-    if (!apiKey && authHeader && authHeader.startsWith('ApiKey ')) {
-      apiKey = authHeader.replace('ApiKey ', '').trim();
+    if (
+      !apiKey &&
+      authHeader &&
+      authHeader.startsWith(API_KEY_CONFIG.AUTH_SCHEME)
+    ) {
+      apiKey = authHeader.replace(API_KEY_CONFIG.AUTH_SCHEME, '').trim();
     }
 
     if (!apiKey) {
@@ -35,11 +40,11 @@ export class ApiKeyGuard implements CanActivate {
 
     // Set authenticated user context
     request.user = {
-      userId: `apikey-${result.record.id}`,
+      userId: `${API_KEY_CONFIG.USER_ID_PREFIX}${result.record.id}`,
       username: result.record.name,
       tenantId: result.record.tenantId,
-      roles: ['service'],
-      issuer: 'local-api-key',
+      roles: [...API_KEY_CONFIG.DEFAULT_ROLES],
+      issuer: API_KEY_CONFIG.ISSUER,
     };
 
     return true;

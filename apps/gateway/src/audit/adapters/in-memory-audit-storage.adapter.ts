@@ -7,6 +7,7 @@ import {
   IAuditStorageAdapter,
   PaginatedAuditLogs,
 } from '../audit.types';
+import { AUDIT_CONFIG } from '../constants/audit.constants';
 
 @Injectable()
 export class InMemoryAuditStorageAdapter implements IAuditStorageAdapter {
@@ -14,7 +15,7 @@ export class InMemoryAuditStorageAdapter implements IAuditStorageAdapter {
   private readonly maxEntries: number;
 
   constructor(@Optional() maxEntries?: number) {
-    this.maxEntries = maxEntries ?? 50000;
+    this.maxEntries = maxEntries ?? AUDIT_CONFIG.DEFAULT_IN_MEMORY_MAX_ENTRIES;
   }
 
   async store(entry: AuditLogEntry): Promise<void> {
