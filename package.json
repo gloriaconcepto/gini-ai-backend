@@ -26,7 +26,9 @@
     "azure:start": "bash scripts/azure-power.sh start",
     "aws:status": "bash scripts/aws-power.sh status",
     "aws:stop": "bash scripts/aws-power.sh stop",
-    "aws:start": "bash scripts/aws-power.sh start"
+    "aws:start": "bash scripts/aws-power.sh start",
+    "openapi:generate": "ts-node -r tsconfig-paths/register scripts/export-openapi.ts",
+    "openapi:check": "ts-node -r tsconfig-paths/register scripts/export-openapi.ts --check"
   },
   "dependencies": {
     "@aws-sdk/client-sagemaker": "^3.1136.0",

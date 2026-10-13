@@ -103,14 +103,14 @@ This document serves as the single source of truth for agents to understand the 
   - [x] Refactor magic numbers (`65536` max header size, `jwksRequestsPerMinute: 10`, `export limit: 5000`, API key entropy/prefix lengths) into centralized constants in `auth.constants.ts`, `audit.constants.ts`, and `server.constants.ts`.
   - [x] Centralize hardcoded realm conventions (`tenant-` prefix, `/realms/master`, `gini-frontend`, `gini-theme`) into unified configuration tokens.
 
-### Epic 6: API Contracts & OpenAPI Specification Export (Phase 1 Gate — Active)
+### Epic 6: API Contracts & OpenAPI Specification Export (Phase 1 Gate — Completed)
 
 - [x] Configure `@nestjs/swagger` with `DocumentBuilder` in `apps/gateway/src/main.ts`.
 - [x] Decorate all Controllers, Handlers, and DTOs across Gateway modules with `@ApiOperation()`, `@ApiResponse()`, `@ApiProperty()`, and validation decorators.
-- [ ] Implement standalone OpenAPI generator script `scripts/export-openapi.ts` to serialize the Swagger document without starting the HTTP listener.
-- [ ] Add `npm run openapi:generate` script in `package.json`.
-- [ ] Generate and export `/contracts/openapi.json` to unblock frontend agents.
-- [ ] Add CI/build verification ensuring `/contracts/openapi.json` is always synchronized with code annotations.
+- [x] Implement standalone OpenAPI generator script `scripts/export-openapi.ts` to serialize the Swagger document without starting the HTTP listener.
+- [x] Add `npm run openapi:generate` script in `package.json`.
+- [x] Generate and export `/contracts/openapi.json` to unblock frontend agents.
+- [x] Add CI/build verification ensuring `/contracts/openapi.json` is always synchronized with code annotations (`npm run openapi:check` and automated contract regression tests).
 
 ---
 

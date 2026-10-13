@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import { GatewayModule } from './gateway.module';
 import { SERVER_CONFIG } from './common/constants/server.constants';
+import { createSwaggerDocument } from './swagger.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(GatewayModule);
@@ -67,14 +68,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   // Initialize Swagger
-  const config = new DocumentBuilder()
-    .setTitle('Gini AI Gateway')
-    .setDescription('API documentation for the Gini Enterprise AI Gateway')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
+  const document = createSwaggerDocument(app);
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(process.env.PORT ?? SERVER_CONFIG.DEFAULT_GATEWAY_PORT);
