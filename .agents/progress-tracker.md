@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Phase 1: Infrastructure, Security Foundations & API Contracts
+- Phase 2: Persistence, Tenant Isolation & Asynchronous Queues
 
 ## Current Goal
 
-- Finalize the Phase 1 Gate by building the automated OpenAPI generator script (`scripts/export-openapi.ts`) to emit `/contracts/openapi.json` to unblock frontend agents, then transition into Phase 2 Drizzle ORM database persistence and tenant Row-Level Security.
+- Implement Epic 7 (Multi-Tenant PostgreSQL Persistence & Drizzle ORM Isolation): connect Drizzle ORM to PostgreSQL, enforce Row-Level Security (RLS) tied to `tenant_id`, and replace in-memory storage adapters for Audit logs and Maker-Checker governance with durable PostgreSQL adapters.
 
 ## Completed
 
@@ -43,11 +43,12 @@ Update this file whenever the current phase, active feature, or implementation s
 - Completed Multi-Cloud Terraform Separation: Separated Terraform configurations into modular, symmetric folders `infra/terraform/aws/` and `infra/terraform/azure/` with preserved Git commit histories, relocated local state and variable files, and added `infra/terraform/README.md` navigation documentation.
 - Completed AWS Infrastructure Decoupling for Decoupled RAG Pipeline: Stripped down AWS Terraform stack (`infra/terraform/aws/`) to strictly provision core services for API Gateway and BullMQ Workers (VPC, Public/App/DB Subnets, RDS PostgreSQL 16, ElastiCache Redis 7, ECR, ALB, ECS Fargate, Secrets Manager, CloudWatch). Removed OpenSearch (`opensearch.tf`, search subnets), SageMaker endpoints & models (`sagemaker.tf`, MLflow, artifacts bucket), and S3 RAG document storage, along with all associated variables, outputs, and power management checks. Validated configuration with `terraform fmt` and `terraform validate`.
 - Completed Epic 5: Codebase Magic Numbers & Constants Cleanup. Centralized hardcoded constants, timeouts, sizes, and realm tokens into dedicated tokens across gateway modules (`auth.constants.ts`, `audit.constants.ts`, `server.constants.ts`) via PR #36.
+- Completed Epic 6: API Contracts & OpenAPI Specification Export (Phase 1 Gate). Implemented standalone CLI generator script `scripts/export-openapi.ts`, added `npm run openapi:generate` and `npm run openapi:check`, exported `/contracts/openapi.json` (43 endpoints, 43 schemas, 106.91 KB), integrated shared Swagger document configuration across runtime and offline tooling, and added automated test verification in `apps/gateway/src/swagger.config.spec.ts`.
 
 ## Active Tasks & Epics
 
-- **Epic 6:** API Contracts & OpenAPI Specification Export (Phase 1 Gate — Active). Implement standalone CLI generator script `scripts/export-openapi.ts`, configure `npm run openapi:generate`, and export `/contracts/openapi.json`.
-- **Epic 7:** Multi-Tenant PostgreSQL Persistence & Drizzle ORM Isolation (Phase 2 — Priority 1). Connect Drizzle ORM to PostgreSQL with tenant RLS policies, replace in-memory storage adapters for Audit logs and Maker-Checker change requests with persistent Drizzle adapters.
+- **Epic 7:** Multi-Tenant PostgreSQL Persistence & Drizzle ORM Isolation (Phase 2 — Active). Connect Drizzle ORM to PostgreSQL with tenant RLS policies, replace in-memory storage adapters for Audit logs and Maker-Checker change requests with persistent Drizzle adapters.
+- **Epic 8:** Distributed Task Queues & BullMQ Worker Architecture (Phase 2 — Priority 2). Configure `@nestjs/bullmq` and Redis broker in `apps/workers` and `apps/gateway`, define shared queue tokens in `libs/contracts`, and implement background job processors.
 - Please refer to [agent-epics.md](./agent-epics.md) for the detailed, sequential list of implementation tasks and active epics.
 
 ## Architecture Decisions

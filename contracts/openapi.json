@@ -1,0 +1,4018 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "GatewayController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service is healthy."
+          }
+        },
+        "summary": "Health check / Root endpoint",
+        "tags": [
+          "Root"
+        ]
+      }
+    },
+    "/iam/users": {
+      "get": {
+        "operationId": "IamController_getUsers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all users in the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "post": {
+        "operationId": "IamController_createUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIamUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new user in the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/users/{userId}": {
+      "get": {
+        "operationId": "IamController_getUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details of the requested user including assigned roles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IamUserResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found in tenant realm"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get details of a specific user in the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "patch": {
+        "operationId": "IamController_updateUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIamUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update profile and status of a user in the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "delete": {
+        "operationId": "IamController_deleteUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a user from the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/users/{userId}/reset-password": {
+      "put": {
+        "operationId": "IamController_resetPassword",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reset a user password by tenant administrator",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/users/{userId}/roles": {
+      "get": {
+        "operationId": "IamController_getUserRoles",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all realm roles assigned to a user",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "post": {
+        "operationId": "IamController_assignRole",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Assign a role to a user",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/users/{userId}/roles/{roleName}": {
+      "delete": {
+        "operationId": "IamController_removeRoleFromUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleName",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove an assigned role from a user",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/roles": {
+      "get": {
+        "operationId": "IamController_listRoles",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all roles defined in the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "post": {
+        "operationId": "IamController_createRole",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIamRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new custom role in the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/roles/{roleName}": {
+      "delete": {
+        "operationId": "IamController_deleteRole",
+        "parameters": [
+          {
+            "name": "roleName",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a custom role from the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/clients": {
+      "get": {
+        "operationId": "IamController_listClients",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all OAuth/OIDC clients in the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "post": {
+        "operationId": "IamController_createClient",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIamClientDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register a new OAuth/OIDC client",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/clients/{id}/secret": {
+      "get": {
+        "operationId": "IamController_getClientSecret",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retrieve credentials/client-secret for a confidential client",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/clients/{id}": {
+      "delete": {
+        "operationId": "IamController_deleteClient",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete an OAuth/OIDC client from the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/idp": {
+      "get": {
+        "operationId": "IamController_listIdps",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all 3rd-party Identity Providers configured for the tenant",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "post": {
+        "operationId": "IamController_createIdp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIdpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register a 3rd-party Identity Provider",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/idp/{alias}": {
+      "patch": {
+        "operationId": "IamController_updateIdp",
+        "parameters": [
+          {
+            "name": "alias",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIdpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a 3rd-party Identity Provider configuration",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "delete": {
+        "operationId": "IamController_deleteIdp",
+        "parameters": [
+          {
+            "name": "alias",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a 3rd-party Identity Provider from the tenant realm",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/groups": {
+      "get": {
+        "operationId": "IamController_getGroups",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Group hierarchy tree with attributes and role mappings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IamGroupResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all groups and organizational hierarchy tree",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "post": {
+        "operationId": "IamController_createGroup",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIamGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a top-level group / corporate department",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/groups/{groupId}": {
+      "get": {
+        "operationId": "IamController_getGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Group representation including roles and subgroups",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IamGroupResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get details of a specific corporate group",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "patch": {
+        "operationId": "IamController_updateGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIamGroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update group metadata and corporate attributes",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "delete": {
+        "operationId": "IamController_deleteGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a group and its nested subgroups",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/groups/{groupId}/children": {
+      "post": {
+        "operationId": "IamController_createSubGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIamSubgroupDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a child subgroup under a parent department",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/groups/{groupId}/roles": {
+      "post": {
+        "operationId": "IamController_assignRoleToGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignGroupRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Map a realm role to a group",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/groups/{groupId}/roles/{roleName}": {
+      "delete": {
+        "operationId": "IamController_removeRoleFromGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roleName",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a realm role from a group",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/groups/{groupId}/members": {
+      "get": {
+        "operationId": "IamController_listGroupMembers",
+        "parameters": [
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all members belonging to a group",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/users/{userId}/groups": {
+      "get": {
+        "operationId": "IamController_getUserGroups",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all groups assigned to a user",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/users/{userId}/groups/{groupId}": {
+      "post": {
+        "operationId": "IamController_addUserToGroup",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add a user to a corporate group",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "delete": {
+        "operationId": "IamController_removeUserFromGroup",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "groupId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove a user from a corporate group",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/idp/{alias}/mappers": {
+      "get": {
+        "operationId": "IamController_listIdpMappers",
+        "parameters": [
+          {
+            "name": "alias",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of claim/role/group mappers for the IdP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IdpMapperResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all mappers configured on a 3rd-party Identity Provider",
+        "tags": [
+          "Tenant IAM"
+        ]
+      },
+      "post": {
+        "operationId": "IamController_createIdpMapper",
+        "parameters": [
+          {
+            "name": "alias",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIdpMapperDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register an IdP claim mapper (roles, groups, or user attributes)",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/idp/{alias}/mappers/{mapperId}": {
+      "delete": {
+        "operationId": "IamController_deleteIdpMapper",
+        "parameters": [
+          {
+            "name": "alias",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mapperId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a claim mapper from a 3rd-party Identity Provider",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/iam/idp/{alias}/sync": {
+      "post": {
+        "operationId": "IamController_syncIdpHierarchy",
+        "parameters": [
+          {
+            "name": "alias",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncIdpHierarchyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Direct result of synchronized corporate hierarchy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncHierarchyResultDto"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Change request submitted for dual-control checker approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Synchronize corporate roles, group hierarchy, and metadata from 3rd-party IdP",
+        "tags": [
+          "Tenant IAM"
+        ]
+      }
+    },
+    "/system/tenants": {
+      "post": {
+        "operationId": "SystemController_createTenant",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The tenant realm has been successfully provisioned.",
+            "headers": {
+              "X-Tenant-ID": {
+                "description": "The unique ID of the newly created tenant",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateTenantResponseDto"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Failed to provision tenant realm."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Provision a new tenant realm and API keys",
+        "tags": [
+          "System Admin (Master)"
+        ]
+      },
+      "get": {
+        "operationId": "SystemController_listTenants",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all provisioned tenant realms",
+        "tags": [
+          "System Admin (Master)"
+        ]
+      }
+    },
+    "/system/tenants/{id}": {
+      "get": {
+        "operationId": "SystemController_getTenant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get details of a specific tenant realm",
+        "tags": [
+          "System Admin (Master)"
+        ]
+      },
+      "patch": {
+        "operationId": "SystemController_updateTenant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update metadata for a specific tenant realm",
+        "tags": [
+          "System Admin (Master)"
+        ]
+      },
+      "delete": {
+        "operationId": "SystemController_deleteTenant",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a tenant realm entirely",
+        "tags": [
+          "System Admin (Master)"
+        ]
+      }
+    },
+    "/system/tenants/{id}/status": {
+      "patch": {
+        "operationId": "SystemController_setTenantStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Enable or disable a tenant realm",
+        "tags": [
+          "System Admin (Master)"
+        ]
+      }
+    },
+    "/iam/api-keys": {
+      "post": {
+        "operationId": "ApiKeyController_createApiKey",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The API key has been created. The raw apiKey is only displayed once upon creation."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate a new API key for the tenant",
+        "tags": [
+          "Tenant API Keys"
+        ]
+      },
+      "get": {
+        "operationId": "ApiKeyController_listApiKeys",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all API keys (metadata) for the tenant",
+        "tags": [
+          "Tenant API Keys"
+        ]
+      }
+    },
+    "/iam/api-keys/{id}": {
+      "delete": {
+        "operationId": "ApiKeyController_revokeApiKey",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke an existing API key",
+        "tags": [
+          "Tenant API Keys"
+        ]
+      }
+    },
+    "/tenant/resolve": {
+      "get": {
+        "operationId": "TenantController_resolveTenant",
+        "parameters": [
+          {
+            "name": "domain",
+            "required": true,
+            "in": "query",
+            "description": "The corporate domain name (e.g. acme.com) or work email address (e.g. user@acme.com)",
+            "schema": {
+              "example": "acme.com",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant workspace connection details for pre-login Keycloak initialization.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantResolutionResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No tenant workspace found for the specified domain or email."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Auto-resolve tenant workspace and Keycloak realm from corporate domain or user email before login",
+        "tags": [
+          "Tenant Workspace"
+        ]
+      }
+    },
+    "/tenant/workspace": {
+      "get": {
+        "operationId": "TenantController_getWorkspace",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The workspace details and Keycloak realm representation for the authenticated tenant user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantWorkspaceResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing JWT token."
+          },
+          "403": {
+            "description": "Forbidden - master/OEM administrators do not belong to a tenant workspace."
+          },
+          "404": {
+            "description": "Tenant realm not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Retrieve tenant workspace details and realm representation for the current authenticated user",
+        "tags": [
+          "Tenant Workspace"
+        ]
+      }
+    },
+    "/iam/governance/requests": {
+      "get": {
+        "description": "Retrieve pending and historical dual-control change requests filtered by status.",
+        "operationId": "GovernanceController_listRequests",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter change requests by status",
+            "schema": {
+              "example": "PENDING",
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED",
+                "REJECTED",
+                "EXECUTED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of change requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all change requests for the tenant realm",
+        "tags": [
+          "Tenant Governance"
+        ]
+      }
+    },
+    "/iam/governance/requests/{id}": {
+      "get": {
+        "operationId": "GovernanceController_getRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique change request identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details and payload of the requested change request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Change request not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get details of a specific change request",
+        "tags": [
+          "Tenant Governance"
+        ]
+      }
+    },
+    "/iam/governance/requests/{id}/approve": {
+      "post": {
+        "description": "Enforces dual control: the approver must have the checker role and cannot be the maker who initiated the request.",
+        "operationId": "GovernanceController_approveRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique change request identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveChangeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Change request approved and executed successfully against Keycloak",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request is not in PENDING state or has invalid payload"
+          },
+          "403": {
+            "description": "Forbidden - maker cannot approve their own change request or user lacks checker role"
+          },
+          "404": {
+            "description": "Change request not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve and execute a pending dual-control change request",
+        "tags": [
+          "Tenant Governance"
+        ]
+      }
+    },
+    "/iam/governance/requests/{id}/reject": {
+      "post": {
+        "description": "Allows a Checker to reject a pending change request with a mandatory review comment.",
+        "operationId": "GovernanceController_rejectRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique change request identifier",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectChangeRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Change request rejected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequestResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Request is not in PENDING state or comment is missing"
+          },
+          "403": {
+            "description": "Forbidden - user lacks checker role"
+          },
+          "404": {
+            "description": "Change request not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject a pending dual-control change request",
+        "tags": [
+          "Tenant Governance"
+        ]
+      }
+    },
+    "/audit/logs": {
+      "get": {
+        "description": "Retrieve paginated, filtered audit logs. Scoped strictly to the caller tenant realm unless invoked by OEM Master Admins.",
+        "operationId": "AuditController_getLogs",
+        "parameters": [
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Filter by action category",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IAM",
+                "SYSTEM",
+                "GOVERNANCE",
+                "API_KEY",
+                "AUTH",
+                "DATA_ACCESS",
+                "SYSTEM_CONFIG"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by audit execution status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SUCCESS",
+                "FAILURE",
+                "DENIED",
+                "PENDING_APPROVAL"
+              ]
+            }
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by actor ID (user ID or API key ID)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resourceType",
+            "required": false,
+            "in": "query",
+            "description": "Filter by target resource type (e.g. user, role, api_key)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Start date in ISO format (inclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "End date in ISO format (inclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Full-text search keyword across routes, operations, actors, or resources",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-indexed)",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of records per page (max 100)",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated audit logs retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPaginatedResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Query audit logs",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/audit/summary": {
+      "get": {
+        "description": "Retrieve high-level audit metrics and activity breakdown for the tenant workspace.",
+        "operationId": "AuditController_getSummary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Summary metrics computed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditMetricsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get audit summary metrics",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/audit/logs/{id}": {
+      "get": {
+        "description": "Retrieve deep-dive information for a single audit log entry by UUID.",
+        "operationId": "AuditController_getLogById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit log record details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Audit log record not found or inaccessible"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get audit log details by ID",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/audit/export": {
+      "get": {
+        "description": "Export filtered audit logs as downloadable CSV or JSON file stream.",
+        "operationId": "AuditController_exportLogs",
+        "parameters": [
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Export file format",
+            "schema": {
+              "default": "json",
+              "type": "string",
+              "enum": [
+                "json",
+                "csv"
+              ]
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Filter by action category",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IAM",
+                "SYSTEM",
+                "GOVERNANCE",
+                "API_KEY",
+                "AUTH",
+                "DATA_ACCESS",
+                "SYSTEM_CONFIG"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by audit execution status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "SUCCESS",
+                "FAILURE",
+                "DENIED",
+                "PENDING_APPROVAL"
+              ]
+            }
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by actor ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "description": "Start date in ISO format",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "description": "End date in ISO format",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search keyword",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exported audit log data stream"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Export audit logs",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/ai/generate": {
+      "post": {
+        "description": "Generates text directly using the deployed SageMaker Real-Time foundation model.",
+        "operationId": "AiController_generateText",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateTextDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Text generation completed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateTextResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate text completion from SageMaker LLM",
+        "tags": [
+          "AI & RAG Services"
+        ]
+      }
+    },
+    "/ai/embeddings": {
+      "post": {
+        "description": "Generates high-dimensional vector representations via the SageMaker embedding endpoint.",
+        "operationId": "AiController_generateEmbeddings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateEmbeddingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Embeddings generated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateEmbeddingResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate dense vector embeddings",
+        "tags": [
+          "AI & RAG Services"
+        ]
+      }
+    },
+    "/ai/rag/query": {
+      "post": {
+        "description": "Retrieves relevant passages from Amazon OpenSearch and generates a grounded response using SageMaker LLM.",
+        "operationId": "AiController_queryRag",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant knowledge base isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RagQueryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "RAG response generated with source citations.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RagQueryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute grounded RAG query",
+        "tags": [
+          "AI & RAG Services"
+        ]
+      }
+    },
+    "/ai/rag/index": {
+      "post": {
+        "description": "Generates embeddings and indexes document chunks into the tenant-specific OpenSearch index.",
+        "operationId": "AiController_indexChunks",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant knowledge base isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Chunks indexed successfully."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Index knowledge chunks into OpenSearch vector store",
+        "tags": [
+          "AI & RAG Services"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Gini AI Gateway",
+    "description": "API documentation for the Gini Enterprise AI Gateway",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Keycloak OIDC JWT token"
+      },
+      "x-api-key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "Tenant API Key for machine-to-machine authentication"
+      }
+    },
+    "schemas": {
+      "IamUserResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "a05c7585-7140-4cb5-8d96-9ee82e0e0bf2",
+            "description": "Unique user identifier in Keycloak"
+          },
+          "username": {
+            "type": "string",
+            "example": "johndoe",
+            "description": "Username for the user"
+          },
+          "email": {
+            "type": "string",
+            "example": "john@example.com",
+            "description": "Email address of the user"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John",
+            "description": "First name of the user"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe",
+            "description": "Last name of the user"
+          },
+          "enabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the user account is enabled"
+          },
+          "emailVerified": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the user email is verified"
+          },
+          "roles": {
+            "example": [
+              "admin",
+              "maker"
+            ],
+            "description": "Assigned realm roles for the user",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "createdTimestamp": {
+            "type": "number",
+            "example": 1693750000000,
+            "description": "Timestamp when the user was created"
+          }
+        },
+        "required": [
+          "roles"
+        ]
+      },
+      "CreateIamUserDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "johndoe",
+            "description": "Username for the new user"
+          },
+          "email": {
+            "type": "string",
+            "example": "john@example.com",
+            "description": "Email for the new user"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John",
+            "description": "First name"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe",
+            "description": "Last name"
+          },
+          "password": {
+            "type": "string",
+            "example": "SecureP@ssw0rd",
+            "description": "Initial password for the user"
+          }
+        },
+        "required": [
+          "username",
+          "email",
+          "password"
+        ]
+      },
+      "ChangeRequestResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426614174000",
+            "description": "Unique identifier of the change request"
+          },
+          "tenantId": {
+            "type": "string",
+            "example": "acme-corp",
+            "description": "Tenant ID where this change request belongs"
+          },
+          "actionType": {
+            "type": "string",
+            "example": "CREATE_USER",
+            "description": "Type of administrative action being requested"
+          },
+          "targetResource": {
+            "type": "string",
+            "example": "users",
+            "description": "Target resource domain (users, roles, clients, idp)"
+          },
+          "targetResourceId": {
+            "type": "string",
+            "example": "user-456",
+            "description": "Identifier of the targeted entity if applicable"
+          },
+          "payload": {
+            "type": "object",
+            "example": {
+              "username": "jdoe",
+              "email": "jdoe@example.com"
+            },
+            "description": "Payload data captured for execution upon checker approval"
+          },
+          "makerId": {
+            "type": "string",
+            "example": "user-maker-uuid",
+            "description": "User ID of the Maker who submitted this request"
+          },
+          "makerUsername": {
+            "type": "string",
+            "example": "maker@acme.com",
+            "description": "Username of the Maker who submitted this request"
+          },
+          "checkerId": {
+            "type": "string",
+            "example": "user-checker-uuid",
+            "description": "User ID of the Checker who reviewed this request"
+          },
+          "checkerUsername": {
+            "type": "string",
+            "example": "checker@acme.com",
+            "description": "Username of the Checker who reviewed this request"
+          },
+          "status": {
+            "type": "string",
+            "example": "PENDING",
+            "enum": [
+              "PENDING",
+              "APPROVED",
+              "REJECTED",
+              "EXECUTED"
+            ],
+            "description": "Current governance state of the change request"
+          },
+          "reviewComment": {
+            "type": "string",
+            "example": "Approved per security board review",
+            "description": "Checker review notes or rejection reason"
+          },
+          "executionResult": {
+            "type": "object",
+            "description": "Result returned by Keycloak upon successful execution"
+          },
+          "executionError": {
+            "type": "string",
+            "example": "User already exists",
+            "description": "Execution error message if execution failed"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-09-08T14:30:00.000Z",
+            "description": "Timestamp when request was initiated"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-09-08T14:35:00.000Z",
+            "description": "Timestamp when request was last updated"
+          },
+          "executedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2026-09-08T14:35:00.000Z",
+            "description": "Timestamp when request was executed against Keycloak"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "actionType",
+          "targetResource",
+          "payload",
+          "makerId",
+          "makerUsername",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateIamUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john@example.com",
+            "description": "Updated email address"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John",
+            "description": "Updated first name"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe",
+            "description": "Updated last name"
+          },
+          "enabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the user account is enabled"
+          }
+        }
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "example": "NewSecureP@ssw0rd",
+            "description": "New password for the user"
+          },
+          "temporary": {
+            "type": "boolean",
+            "example": false,
+            "description": "Require user to change password on next login"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "AssignRoleDto": {
+        "type": "object",
+        "properties": {
+          "roleName": {
+            "type": "string",
+            "example": "auditor",
+            "description": "Name of the role to assign"
+          }
+        },
+        "required": [
+          "roleName"
+        ]
+      },
+      "CreateIamRoleDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "auditor",
+            "description": "Name of the role"
+          },
+          "description": {
+            "type": "string",
+            "example": "Read-only access to audit logs",
+            "description": "Role description"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreateIamClientDto": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string",
+            "example": "my-frontend-app",
+            "description": "Client ID"
+          },
+          "publicClient": {
+            "type": "boolean",
+            "example": true,
+            "description": "Is this a public client?"
+          },
+          "directAccessGrantsEnabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Enable direct access grants (password flow)"
+          },
+          "redirectUris": {
+            "example": [
+              "http://localhost:3000/*"
+            ],
+            "description": "Allowed redirect URIs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "webOrigins": {
+            "example": [
+              "http://localhost:3000"
+            ],
+            "description": "Allowed Web Origins (CORS)",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "clientId",
+          "publicClient",
+          "directAccessGrantsEnabled"
+        ]
+      },
+      "CreateIdpDto": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "example": "google-sso",
+            "description": "Alias for the Identity Provider"
+          },
+          "providerId": {
+            "type": "string",
+            "example": "google",
+            "description": "Provider ID (e.g. google, oidc, saml)"
+          },
+          "config": {
+            "type": "object",
+            "example": {
+              "clientId": "xxx",
+              "clientSecret": "yyy"
+            },
+            "description": "Key-value config specific to the provider ID"
+          }
+        },
+        "required": [
+          "alias",
+          "providerId",
+          "config"
+        ]
+      },
+      "UpdateIdpDto": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "example": "Google Workspace SSO",
+            "description": "Display name for IDP"
+          },
+          "enabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Enable or disable IDP"
+          },
+          "config": {
+            "type": "object",
+            "example": {
+              "clientId": "xxx",
+              "clientSecret": "yyy"
+            },
+            "description": "Updated IDP key-value configuration"
+          }
+        }
+      },
+      "IamGroupResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "9c53c072-4ea5-4122-8e1c-5d181057e034",
+            "description": "Unique Keycloak group identifier"
+          },
+          "name": {
+            "type": "string",
+            "example": "Engineering",
+            "description": "Group name"
+          },
+          "path": {
+            "type": "string",
+            "example": "/Engineering",
+            "description": "Hierarchical path of the group"
+          },
+          "attributes": {
+            "type": "object",
+            "example": {
+              "departmentCode": [
+                "ENG-01"
+              ]
+            },
+            "description": "Custom attributes and corporate metadata"
+          },
+          "realmRoles": {
+            "example": [
+              "maker",
+              "user"
+            ],
+            "description": "Realm roles mapped directly to this group",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subGroups": {
+            "description": "Subgroups nested within this group",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IamGroupResponseDto"
+            }
+          }
+        }
+      },
+      "CreateIamGroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Engineering",
+            "description": "Name of the corporate group / department"
+          },
+          "attributes": {
+            "type": "object",
+            "example": {
+              "departmentCode": [
+                "ENG-01"
+              ],
+              "costCenter": [
+                "CC-1042"
+              ]
+            },
+            "description": "Custom metadata attributes associated with the group"
+          },
+          "roles": {
+            "example": [
+              "user"
+            ],
+            "description": "Optional initial realm roles to bind to this group",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreateIamSubgroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "DevOps",
+            "description": "Name of the subgroup under the parent department"
+          },
+          "attributes": {
+            "type": "object",
+            "example": {
+              "teamLead": [
+                "lead@example.com"
+              ]
+            },
+            "description": "Custom metadata attributes for the subgroup"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateIamGroupDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Core Platform Engineering",
+            "description": "Updated name of the group"
+          },
+          "attributes": {
+            "type": "object",
+            "example": {
+              "departmentCode": [
+                "ENG-02"
+              ],
+              "costCenter": [
+                "CC-1045"
+              ]
+            },
+            "description": "Updated attributes for the group"
+          }
+        }
+      },
+      "AssignGroupRoleDto": {
+        "type": "object",
+        "properties": {
+          "roleName": {
+            "type": "string",
+            "example": "maker",
+            "description": "Name of the realm role to assign to the group"
+          }
+        },
+        "required": [
+          "roleName"
+        ]
+      },
+      "IdpMapperResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "d9b9ef3e-436f-4279-99fc-77b31ee9c279",
+            "description": "Unique mapper identifier in Keycloak"
+          },
+          "name": {
+            "type": "string",
+            "example": "Azure AD Roles to Realm Roles",
+            "description": "Name of the mapper"
+          },
+          "identityProviderMapper": {
+            "type": "string",
+            "example": "oidc-role-idp-mapper",
+            "description": "Mapper type implementation in Keycloak"
+          },
+          "identityProviderAlias": {
+            "type": "string",
+            "example": "azure-ad",
+            "description": "Alias of the associated Identity Provider"
+          },
+          "config": {
+            "type": "object",
+            "example": {
+              "claim": "roles",
+              "role": "admin"
+            },
+            "description": "Key-value mapper configuration"
+          }
+        }
+      },
+      "CreateIdpMapperDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Azure AD Roles to Realm Roles",
+            "description": "Descriptive name for the IdP claim mapper"
+          },
+          "identityProviderMapper": {
+            "type": "string",
+            "example": "oidc-role-idp-mapper",
+            "description": "Keycloak IdP mapper type (e.g. oidc-role-idp-mapper, oidc-group-idp-mapper, oidc-user-attribute-idp-mapper, saml-role-idp-mapper)"
+          },
+          "config": {
+            "type": "object",
+            "example": {
+              "claim": "roles",
+              "claim.value": "Admin",
+              "role": "admin",
+              "syncMode": "FORCE"
+            },
+            "description": "Configuration dictionary for the specific mapper type"
+          }
+        },
+        "required": [
+          "name",
+          "identityProviderMapper",
+          "config"
+        ]
+      },
+      "SyncRoleItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "engineering-lead",
+            "description": "Name of corporate role"
+          },
+          "description": {
+            "type": "string",
+            "example": "Lead Engineer with Maker privileges",
+            "description": "Role description"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "SyncGroupTreeItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Engineering",
+            "description": "Name of corporate group/department"
+          },
+          "attributes": {
+            "type": "object",
+            "example": {
+              "departmentCode": [
+                "ENG-01"
+              ],
+              "costCenter": [
+                "CC-900"
+              ]
+            },
+            "description": "Custom metadata attributes"
+          },
+          "roles": {
+            "example": [
+              "user",
+              "maker"
+            ],
+            "description": "Roles mapped to members of this group",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subGroups": {
+            "description": "Nested child subgroups",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncGroupTreeItemDto"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "SyncIdpHierarchyDto": {
+        "type": "object",
+        "properties": {
+          "roles": {
+            "description": "Corporate roles to synchronize/import into the tenant realm",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncRoleItemDto"
+            }
+          },
+          "groups": {
+            "description": "Hierarchical group/department tree to synchronize/import",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncGroupTreeItemDto"
+            }
+          },
+          "providerCredentials": {
+            "type": "object",
+            "example": {
+              "clientId": "xxx",
+              "clientSecret": "yyy",
+              "tenantDirectoryId": "zzz"
+            },
+            "description": "Optional directory API credentials for live Graph/SCIM directory discovery"
+          },
+          "syncMode": {
+            "type": "string",
+            "example": "MERGE",
+            "enum": [
+              "MERGE",
+              "REPLACE"
+            ],
+            "description": "Sync behavior: MERGE preserves existing groups/roles; REPLACE overwrites them",
+            "default": "MERGE"
+          }
+        }
+      },
+      "SyncHierarchyResultDto": {
+        "type": "object",
+        "properties": {
+          "rolesCreated": {
+            "type": "number",
+            "example": 4,
+            "description": "Number of corporate roles created or updated"
+          },
+          "groupsCreated": {
+            "type": "number",
+            "example": 3,
+            "description": "Number of top-level corporate groups created"
+          },
+          "subgroupsCreated": {
+            "type": "number",
+            "example": 5,
+            "description": "Number of nested subgroups created"
+          },
+          "roleMappingsCreated": {
+            "type": "number",
+            "example": 7,
+            "description": "Number of role-to-group mappings assigned"
+          },
+          "details": {
+            "example": [
+              "Created role: engineering-lead",
+              "Created group: Engineering",
+              "Created subgroup: DevOps under Engineering",
+              "Mapped role maker to group DevOps"
+            ],
+            "description": "Detailed execution logs of the sync operation",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "rolesCreated",
+          "groupsCreated",
+          "subgroupsCreated",
+          "roleMappingsCreated",
+          "details"
+        ]
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {
+          "tenantName": {
+            "type": "string",
+            "description": "The display name of the tenant",
+            "example": "Acme Corp"
+          },
+          "makerEmail": {
+            "type": "string",
+            "description": "The email address of the default tenant maker",
+            "example": "maker@acme.com"
+          },
+          "makerPassword": {
+            "type": "string",
+            "description": "The password for the default tenant maker",
+            "example": "securePassword123"
+          },
+          "makerFirstName": {
+            "type": "string",
+            "description": "The first name of the default tenant maker",
+            "example": "John"
+          },
+          "makerLastName": {
+            "type": "string",
+            "description": "The last name of the default tenant maker",
+            "example": "Doe"
+          },
+          "checkerEmail": {
+            "type": "string",
+            "description": "The email address of the default tenant checker",
+            "example": "checker@acme.com"
+          },
+          "checkerPassword": {
+            "type": "string",
+            "description": "The password for the default tenant checker",
+            "example": "securePassword123"
+          },
+          "checkerFirstName": {
+            "type": "string",
+            "description": "The first name of the default tenant checker",
+            "example": "Jane"
+          },
+          "checkerLastName": {
+            "type": "string",
+            "description": "The last name of the default tenant checker",
+            "example": "Smith"
+          },
+          "industry": {
+            "type": "string",
+            "example": "Finance",
+            "description": "Industry / Sector"
+          },
+          "domainName": {
+            "type": "string",
+            "example": "acme.com",
+            "description": "Corporate Domain Name"
+          },
+          "subscriptionTier": {
+            "type": "string",
+            "example": "Enterprise",
+            "description": "Subscription Tier"
+          },
+          "taxId": {
+            "type": "string",
+            "example": "12-3456789",
+            "description": "Company Registration Number / Tax ID"
+          },
+          "billingAddress": {
+            "type": "string",
+            "example": "123 Main St, USA",
+            "description": "Billing Address / Country"
+          },
+          "contactPhone": {
+            "type": "string",
+            "example": "+1-555-0198",
+            "description": "Primary Contact Phone Number"
+          },
+          "clientId": {
+            "type": "string",
+            "example": "gini-frontend",
+            "description": "Custom client ID for frontend application (defaults to gini-frontend)"
+          }
+        },
+        "required": [
+          "tenantName",
+          "makerEmail",
+          "makerPassword",
+          "checkerEmail",
+          "checkerPassword"
+        ]
+      },
+      "TenantProvisionedUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "user-uuid-1234",
+            "description": "Unique Keycloak user ID"
+          },
+          "email": {
+            "type": "string",
+            "example": "maker@acme.com",
+            "description": "Email address of the provisioned user"
+          },
+          "username": {
+            "type": "string",
+            "example": "maker@acme.com",
+            "description": "Keycloak username of the provisioned user"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John",
+            "description": "First name of the provisioned user"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe",
+            "description": "Last name of the provisioned user"
+          },
+          "roles": {
+            "example": [
+              "maker",
+              "admin"
+            ],
+            "description": "Assigned governance roles for the user",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "username",
+          "roles"
+        ]
+      },
+      "CreateTenantResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "description": "Unique identifier for the tenant"
+          },
+          "tenantName": {
+            "type": "string",
+            "example": "Acme Corp",
+            "description": "The display name of the tenant"
+          },
+          "realm": {
+            "type": "string",
+            "example": "tenant-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "description": "The provisioned Keycloak realm name"
+          },
+          "clientId": {
+            "type": "string",
+            "example": "gini-frontend",
+            "description": "The Keycloak client ID for frontend authentication"
+          },
+          "maker": {
+            "description": "Provisioned Maker user details",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TenantProvisionedUserDto"
+              }
+            ]
+          },
+          "checker": {
+            "description": "Provisioned Checker user details",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TenantProvisionedUserDto"
+              }
+            ]
+          },
+          "enabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the tenant realm is active and enabled"
+          },
+          "roles": {
+            "example": [
+              "maker",
+              "checker",
+              "auditor",
+              "user",
+              "admin"
+            ],
+            "description": "Default governance roles provisioned for the tenant",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "industry": {
+            "type": "string",
+            "example": "Finance",
+            "description": "Industry / Sector"
+          },
+          "domainName": {
+            "type": "string",
+            "example": "acme.com",
+            "description": "Corporate Domain Name"
+          },
+          "subscriptionTier": {
+            "type": "string",
+            "example": "Enterprise",
+            "description": "Subscription Tier",
+            "enum": [
+              "Basic",
+              "Pro",
+              "Enterprise"
+            ]
+          },
+          "taxId": {
+            "type": "string",
+            "example": "12-3456789",
+            "description": "Company Registration Number / Tax ID"
+          },
+          "billingAddress": {
+            "type": "string",
+            "example": "123 Main St, USA",
+            "description": "Billing Address / Country"
+          },
+          "contactPhone": {
+            "type": "string",
+            "example": "+1-555-0198",
+            "description": "Primary Contact Phone Number"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-09-01T14:00:00.000Z",
+            "description": "Timestamp when the tenant was provisioned"
+          }
+        },
+        "required": [
+          "tenantId",
+          "tenantName",
+          "realm",
+          "clientId",
+          "maker",
+          "checker",
+          "enabled",
+          "roles",
+          "createdAt"
+        ]
+      },
+      "TenantStatusDto": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Set tenant realm status (enabled or disabled)"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "CreateApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Backend Ingestion Service",
+            "description": "Name/label for the API Key"
+          },
+          "expiresInDays": {
+            "type": "number",
+            "example": 30,
+            "description": "Expiration period in days (optional)"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "TenantResolutionResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "description": "Unique identifier for the tenant"
+          },
+          "tenantName": {
+            "type": "string",
+            "example": "Acme Corp",
+            "description": "Display name of the tenant workspace"
+          },
+          "realm": {
+            "type": "string",
+            "example": "tenant-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "description": "Keycloak realm identifier"
+          },
+          "clientId": {
+            "type": "string",
+            "example": "gini-frontend",
+            "description": "Frontend client ID for OIDC authentication"
+          },
+          "keycloakUrl": {
+            "type": "string",
+            "example": "http://localhost:8080/realms/tenant-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "description": "Keycloak issuer URL for OIDC discovery"
+          },
+          "loginTheme": {
+            "type": "string",
+            "example": "gini-theme",
+            "description": "Configured login theme for the tenant realm"
+          }
+        },
+        "required": [
+          "tenantId",
+          "tenantName",
+          "realm",
+          "clientId",
+          "keycloakUrl"
+        ]
+      },
+      "WorkspaceCurrentUserDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "example": "user-uuid-1234",
+            "description": "Unique identifier of the authenticated user"
+          },
+          "username": {
+            "type": "string",
+            "example": "alice@acme.com",
+            "description": "Username / preferred email of the user"
+          },
+          "roles": {
+            "example": [
+              "user"
+            ],
+            "description": "Roles assigned to the authenticated user within this realm",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "userId",
+          "username",
+          "roles"
+        ]
+      },
+      "TenantWorkspaceResponseDto": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "example": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "description": "Unique identifier for the tenant"
+          },
+          "tenantName": {
+            "type": "string",
+            "example": "Acme Corp",
+            "description": "Display name of the tenant workspace"
+          },
+          "realm": {
+            "type": "string",
+            "example": "tenant-9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+            "description": "Provisioned Keycloak realm identifier"
+          },
+          "clientId": {
+            "type": "string",
+            "example": "gini-frontend",
+            "description": "Frontend client ID for OIDC authentication"
+          },
+          "enabled": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the tenant realm is active and enabled"
+          },
+          "loginTheme": {
+            "type": "string",
+            "example": "gini-theme",
+            "description": "Keycloak login theme applied to the realm"
+          },
+          "accountTheme": {
+            "type": "string",
+            "example": "gini-theme",
+            "description": "Keycloak account theme applied to the realm"
+          },
+          "adminTheme": {
+            "type": "string",
+            "example": "gini-theme",
+            "description": "Keycloak admin console theme applied to the realm"
+          },
+          "emailTheme": {
+            "type": "string",
+            "example": "gini-theme",
+            "description": "Keycloak email theme applied to the realm"
+          },
+          "industry": {
+            "type": "string",
+            "example": "Finance",
+            "description": "Corporate industry / sector"
+          },
+          "domainName": {
+            "type": "string",
+            "example": "acme.com",
+            "description": "Corporate domain name"
+          },
+          "subscriptionTier": {
+            "type": "string",
+            "example": "Enterprise",
+            "description": "Subscription tier level",
+            "enum": [
+              "Basic",
+              "Pro",
+              "Enterprise"
+            ]
+          },
+          "taxId": {
+            "type": "string",
+            "example": "12-3456789",
+            "description": "Corporate tax ID / registration number"
+          },
+          "billingAddress": {
+            "type": "string",
+            "example": "123 Main St, USA",
+            "description": "Billing address"
+          },
+          "contactPhone": {
+            "type": "string",
+            "example": "+1-555-0198",
+            "description": "Primary contact phone number"
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Raw Keycloak realm attributes dictionary"
+          },
+          "currentUser": {
+            "description": "Authenticated user context details",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/WorkspaceCurrentUserDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tenantId",
+          "tenantName",
+          "realm",
+          "enabled",
+          "currentUser"
+        ]
+      },
+      "ApproveChangeRequestDto": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "example": "Approved after verification",
+            "description": "Optional approval notes or audit comment"
+          }
+        }
+      },
+      "RejectChangeRequestDto": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "example": "Missing authorization approval ticket from IT Security",
+            "description": "Mandatory reason for rejecting the change request"
+          }
+        },
+        "required": [
+          "comment"
+        ]
+      },
+      "AuditActorDto": {
+        "type": "object",
+        "properties": {
+          "actorId": {
+            "type": "string",
+            "description": "Unique actor identifier (Keycloak sub or API Key ID)"
+          },
+          "actorType": {
+            "type": "string",
+            "description": "Actor classification",
+            "enum": [
+              "USER",
+              "API_KEY",
+              "SYSTEM",
+              "ANONYMOUS"
+            ]
+          },
+          "username": {
+            "type": "string",
+            "description": "Actor username if available"
+          },
+          "email": {
+            "type": "string",
+            "description": "Actor email address if available"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "Actor tenant realm ID"
+          },
+          "roles": {
+            "description": "Assigned roles to actor at execution time",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ipAddress": {
+            "type": "string",
+            "description": "Client IP address"
+          },
+          "userAgent": {
+            "type": "string",
+            "description": "Client User-Agent header"
+          }
+        },
+        "required": [
+          "actorId",
+          "actorType",
+          "roles"
+        ]
+      },
+      "AuditLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique audit log UUID"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO 8601 UTC timestamp of the audited action"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "Tenant realm identifier"
+          },
+          "traceId": {
+            "type": "string",
+            "description": "Trace or request correlation ID"
+          },
+          "actor": {
+            "description": "Actor who triggered the action",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuditActorDto"
+              }
+            ]
+          },
+          "category": {
+            "type": "string",
+            "description": "High-level action domain category",
+            "enum": [
+              "IAM",
+              "SYSTEM",
+              "GOVERNANCE",
+              "API_KEY",
+              "AUTH",
+              "DATA_ACCESS",
+              "SYSTEM_CONFIG"
+            ]
+          },
+          "operation": {
+            "type": "string",
+            "description": "Human-readable action name"
+          },
+          "httpMethod": {
+            "type": "string",
+            "description": "HTTP method used"
+          },
+          "routePath": {
+            "type": "string",
+            "description": "HTTP endpoint path"
+          },
+          "resourceType": {
+            "type": "string",
+            "description": "Target resource entity type"
+          },
+          "resourceId": {
+            "type": "string",
+            "description": "Target resource identifier if applicable"
+          },
+          "statusCode": {
+            "type": "number",
+            "description": "HTTP status code result"
+          },
+          "durationMs": {
+            "type": "number",
+            "description": "Execution duration in milliseconds"
+          },
+          "status": {
+            "type": "string",
+            "description": "Final audit status",
+            "enum": [
+              "SUCCESS",
+              "FAILURE",
+              "DENIED",
+              "PENDING_APPROVAL"
+            ]
+          },
+          "payload": {
+            "type": "object",
+            "description": "Sanitized request body payload (sensitive fields redacted)"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional contextual metadata (sanitized)"
+          },
+          "errorMessage": {
+            "type": "string",
+            "description": "Error message if action failed"
+          }
+        },
+        "required": [
+          "id",
+          "timestamp",
+          "tenantId",
+          "traceId",
+          "actor",
+          "category",
+          "operation",
+          "httpMethod",
+          "routePath",
+          "resourceType",
+          "statusCode",
+          "durationMs",
+          "status"
+        ]
+      },
+      "AuditPaginatedResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "List of audit log records",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLogResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "description": "Total number of matching audit logs"
+          },
+          "page": {
+            "type": "number",
+            "description": "Current page number"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size limit"
+          },
+          "totalPages": {
+            "type": "number",
+            "description": "Total available pages"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
+        ]
+      },
+      "TopActorMetricDto": {
+        "type": "object",
+        "properties": {
+          "actorId": {
+            "type": "string",
+            "description": "Actor identifier"
+          },
+          "username": {
+            "type": "string",
+            "description": "Actor username"
+          },
+          "count": {
+            "type": "number",
+            "description": "Number of recorded actions"
+          }
+        },
+        "required": [
+          "actorId",
+          "count"
+        ]
+      },
+      "AuditMetricsResponseDto": {
+        "type": "object",
+        "properties": {
+          "totalEvents": {
+            "type": "number",
+            "description": "Total audited events for tenant"
+          },
+          "successCount": {
+            "type": "number",
+            "description": "Count of successful actions"
+          },
+          "failureCount": {
+            "type": "number",
+            "description": "Count of failed/denied actions"
+          },
+          "categoryBreakdown": {
+            "type": "object",
+            "description": "Counts aggregated by category"
+          },
+          "statusBreakdown": {
+            "type": "object",
+            "description": "Counts aggregated by status"
+          },
+          "topActors": {
+            "description": "Top active actors",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TopActorMetricDto"
+            }
+          }
+        },
+        "required": [
+          "totalEvents",
+          "successCount",
+          "failureCount",
+          "categoryBreakdown",
+          "statusBreakdown",
+          "topActors"
+        ]
+      },
+      "GenerateTextDto": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "Input prompt or instructions for the LLM.",
+            "example": "Summarize the compliance guidelines for data retention."
+          },
+          "maxTokens": {
+            "type": "number",
+            "description": "Maximum number of tokens to generate.",
+            "example": 1024,
+            "default": 1024
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Sampling temperature for generation (0.0 = deterministic, 1.0 = creative).",
+            "example": 0.7,
+            "default": 0.7
+          },
+          "topP": {
+            "type": "number",
+            "description": "Top-p nucleus sampling probability threshold.",
+            "example": 0.9,
+            "default": 0.9
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      },
+      "GenerateTextResponseDto": {
+        "type": "object",
+        "properties": {
+          "generatedText": {
+            "type": "string",
+            "description": "Generated text content from the LLM.",
+            "example": "Based on the policy, all changes require Dual Control approval."
+          },
+          "model": {
+            "type": "string",
+            "description": "Identifier of the LLM model or endpoint that generated the response.",
+            "example": "gini-llm-reasoning-dev (DeepSeek-R1-Distill-Llama-8B)"
+          }
+        },
+        "required": [
+          "generatedText",
+          "model"
+        ]
+      },
+      "GenerateEmbeddingDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text string to generate embedding vector for.",
+            "example": "Enterprise risk management frameworks and dual control requirements."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "GenerateEmbeddingResponseDto": {
+        "type": "object",
+        "properties": {
+          "embedding": {
+            "description": "Dense vector embedding floating point array.",
+            "example": [
+              0.0241,
+              -0.0152,
+              0.0891
+            ],
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "dimension": {
+            "type": "number",
+            "description": "Dimensionality of the generated embedding vector.",
+            "example": 1024
+          }
+        },
+        "required": [
+          "embedding",
+          "dimension"
+        ]
+      },
+      "RagQueryDto": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "User natural language query to retrieve context and generate an answer for.",
+            "example": "What are the required approvals for adding a new identity provider?"
+          },
+          "topK": {
+            "type": "number",
+            "description": "Number of relevant knowledge chunks to retrieve from OpenSearch.",
+            "example": 5,
+            "default": 5
+          },
+          "useHybridSearch": {
+            "type": "boolean",
+            "description": "Whether to use Hybrid Search (k-NN vector + BM25 keyword) instead of vector-only search.",
+            "example": true,
+            "default": true
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "RetrievedChunkDto": {
+        "type": "object",
+        "properties": {
+          "chunkId": {
+            "type": "string",
+            "description": "Chunk identifier.",
+            "example": "chunk-12345"
+          },
+          "documentId": {
+            "type": "string",
+            "description": "Parent document identifier.",
+            "example": "doc-67890"
+          },
+          "text": {
+            "type": "string",
+            "description": "Retrieved text passage.",
+            "example": "Maker-Checker policy requires all mutation requests to be approved by a distinct Checker."
+          },
+          "score": {
+            "type": "number",
+            "description": "Relevance similarity score calculated by OpenSearch (k-NN / BM25 / RRF).",
+            "example": 0.892
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Associated metadata attributes.",
+            "example": {
+              "page": 3,
+              "source": "governance-policy.pdf"
+            }
+          }
+        },
+        "required": [
+          "chunkId",
+          "documentId",
+          "text",
+          "score"
+        ]
+      },
+      "RagQueryResponseDto": {
+        "type": "object",
+        "properties": {
+          "answer": {
+            "type": "string",
+            "description": "Grounded answer generated by the LLM using the retrieved context.",
+            "example": "To add a new identity provider, a Maker must submit the request, which then requires approval from an independent Checker."
+          },
+          "sources": {
+            "description": "List of relevant source chunks retrieved from the tenant OpenSearch knowledge base.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetrievedChunkDto"
+            }
+          },
+          "retrievalMode": {
+            "type": "string",
+            "description": "Search mode utilized for knowledge retrieval.",
+            "example": "hybrid (k-NN + BM25)"
+          }
+        },
+        "required": [
+          "answer",
+          "sources",
+          "retrievalMode"
+        ]
+      }
+    }
+  }
+}
