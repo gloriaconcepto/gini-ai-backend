@@ -89,6 +89,18 @@ export class EnvironmentVariables {
   @IsNumber()
   @IsOptional()
   OPENSEARCH_VECTOR_DIMENSION?: number;
+
+  @IsString()
+  @IsOptional()
+  AWS_S3_BUCKET_NAME: string = 'gini-rag-documents';
+
+  @IsString()
+  @IsOptional()
+  AWS_S3_REGION: string = 'us-west-2';
+
+  @IsNumber()
+  @IsOptional()
+  AWS_S3_PRESIGNED_EXPIRATION_SECONDS: number = 900;
 }
 
 export function validate(config: Record<string, unknown>) {
