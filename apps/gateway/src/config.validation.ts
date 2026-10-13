@@ -69,6 +69,26 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   ENTERPRISE_PORTAL_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_REGION?: string;
+
+  @IsString()
+  @IsOptional()
+  SAGEMAKER_LLM_ENDPOINT_NAME?: string;
+
+  @IsString()
+  @IsOptional()
+  SAGEMAKER_EMBEDDING_ENDPOINT_NAME?: string;
+
+  @IsString()
+  @IsOptional()
+  OPENSEARCH_NODE_URL?: string;
+
+  @IsNumber()
+  @IsOptional()
+  OPENSEARCH_VECTOR_DIMENSION?: number;
 }
 
 export function validate(config: Record<string, unknown>) {

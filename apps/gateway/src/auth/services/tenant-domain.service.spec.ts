@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NotFoundException } from '@nestjs/common';
 import { TenantDomainService } from './tenant-domain.service';
 import { KeycloakService } from './keycloak.service';
+import { getTenantRealmName } from '../constants/auth.constants';
 
 jest.mock('@keycloak/keycloak-admin-client', () => jest.fn());
 
@@ -94,7 +95,7 @@ describe('TenantDomainService', () => {
 
       const resolved = await service.resolveDomain('alice.smith@acme.com');
       expect(resolved.tenantId).toBe(tenantId);
-      expect(resolved.realm).toBe(`tenant-${tenantId}`);
+      expect(resolved.realm).toBe(getTenantRealmName(tenantId));
     });
 
     it('should fallback to Keycloak realm attributes if domain is not yet in table', async () => {

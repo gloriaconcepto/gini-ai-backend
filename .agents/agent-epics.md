@@ -158,4 +158,35 @@ This document serves as the single source of truth for agents to understand the 
 ## Epic 5: Asynchronous Queues & AI Stubbing (Phase 2 Prep)
 - [ ] Configure `@nestjs/bullmq` with Redis.
 - [ ] Scaffold Doc AI ingestion workers.
-- [ ] Create `ILlmProvider` and implement a static mock service (GPU dependencies paused).
+- [x] Create `ILlmProvider` and implement a static mock service (`MockLlmService` in `apps/gateway/src/ai`).
+
+## Epic 6: AWS Migration & SageMaker AI with Amazon OpenSearch RAG Pipeline
+- [x] AWS Infrastructure as Code (`infra/terraform/aws/`):
+  - [x] Multi-AZ VPC, Public/Private subnets, NAT Gateway, Internet Gateway, and Route Tables.
+  - [x] Amazon RDS for PostgreSQL 16 (`ginidb` and `keycloak`) with custom parameter group.
+  - [x] Amazon ElastiCache for Redis cluster in private subnet.
+  - [x] Application Load Balancer (ALB) with path routing and ECS Fargate cluster configuration.
+  - [x] Amazon S3 bucket for RAG enterprise document storage (`s3://gini-ai-rag-documents-${env}`).
+  - [x] AWS Secrets Manager and SSM Parameter Store for credential isolation.
+  - [x] Amazon ECR repositories (`gateway`, `workers`, `keycloak`) and least-privilege IAM Task Execution and Task roles.
+- [x] Dedicated Knowledge Base Vector Store (`infra/terraform/aws/opensearch.tf`):
+  - [x] Amazon OpenSearch Service Managed Cluster with EBS storage (`t3.medium.search`) for dev/staging cost control.
+  - [x] k-NN vector search engine enabled (`faiss` / HNSW) with Cosine similarity.
+  - [x] IAM SigV4 domain access policy for ECS Task Role and SageMaker execution role.
+- [x] AWS SageMaker AI Fixed-Cost Inference & MLOps (`infra/terraform/aws/sagemaker.tf`):
+  - [x] SageMaker Real-Time Endpoint for LLM reasoning (`ml.g5.2xlarge` running AWS LMI container).
+  - [x] Dedicated SageMaker Inference Endpoint for embedding generation (`ml.g5.xlarge` running Hugging Face TEI).
+  - [x] SageMaker Managed MLflow tracking server (`gini-mlflow-${env}`) for RAG experiment logging.
+- [x] NestJS Application AI Layer (`apps/gateway/src/ai/`):
+  - [x] Provider abstractions (`ILlmProvider`, `IEmbeddingProvider`, `IVectorStore`).
+  - [x] `SageMakerLlmService` with `@aws-sdk/client-sagemaker-runtime` supporting streaming and completions.
+  - [x] `SageMakerEmbeddingService` for dense vector generation.
+  - [x] `OpenSearchVectorService` with `@opensearch-project/opensearch` supporting tenant index creation, k-NN vector search, and BM25 hybrid search.
+  - [x] `RagOrchestratorService` for end-to-end grounded query execution and batch chunk indexing.
+  - [x] `AiController` with full OpenAPI/Swagger annotations (`POST /ai/generate`, `POST /ai/embeddings`, `POST /ai/rag/query`, `POST /ai/rag/index`).
+  - [x] Dynamic `AiModule` factory resolving AWS services in production/remote and `MockLlmService` for offline local Docker development.
+- [x] Operations, Power Control & CI/CD:
+  - [x] `scripts/aws-power.sh` managing power states (`status`, `stop`, `start`) for RDS, ECS Fargate, and SageMaker.
+  - [x] Added `aws:status`, `aws:stop`, `aws:start` npm scripts.
+  - [x] GitHub Actions workflow `.github/workflows/deploy-aws.yml` with AWS OIDC authentication and ECR/ECS deployment.
+  - [x] Environment configuration template `.env.aws.example`.
