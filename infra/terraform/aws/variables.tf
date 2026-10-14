@@ -52,50 +52,14 @@ variable "keycloak_admin_client_secret" {
   sensitive   = true
 }
 
-variable "opensearch_instance_type" {
-  description = "Instance type for the Amazon OpenSearch Managed Cluster (EBS-backed)."
+variable "s3_document_bucket_name" {
+  description = "Name of the external S3 bucket managed by the standalone RAG pipeline for tenant documents."
   type        = string
-  default     = "t3.medium.search"
-}
-
-variable "opensearch_instance_count" {
-  description = "Number of data nodes in the OpenSearch cluster."
-  type        = number
-  default     = 2
-}
-
-variable "opensearch_ebs_volume_size" {
-  description = "EBS storage volume size in GB per OpenSearch data node."
-  type        = number
-  default     = 20
-}
-
-variable "sagemaker_llm_instance_type" {
-  description = "Instance type for the SageMaker Real-Time LLM Endpoint."
-  type        = string
-  default     = "ml.g5.2xlarge"
-}
-
-variable "sagemaker_llm_instance_count" {
-  description = "Number of instances for the SageMaker Real-Time LLM Endpoint."
-  type        = number
-  default     = 1
-}
-
-variable "sagemaker_embedding_instance_type" {
-  description = "Instance type for the SageMaker Embedding Endpoint."
-  type        = string
-  default     = "ml.g5.xlarge"
-}
-
-variable "sagemaker_embedding_instance_count" {
-  description = "Number of instances for the SageMaker Embedding Endpoint."
-  type        = number
-  default     = 1
+  default     = "gini-rag-documents"
 }
 
 variable "enable_scale_to_zero" {
-  description = "Whether to configure ECS services and SageMaker to scale to zero during idle/off-hours."
+  description = "Whether to configure ECS services to scale to zero during idle/off-hours."
   type        = bool
   default     = false
 }
@@ -104,4 +68,10 @@ variable "cors_origins" {
   description = "Comma-separated list of allowed CORS origins for the API Gateway."
   type        = string
   default     = ""
+}
+
+variable "frontend_price_class" {
+  description = "CloudFront distribution price class for the frontend SPA (PriceClass_100, PriceClass_200, PriceClass_All)."
+  type        = string
+  default     = "PriceClass_100"
 }

@@ -13,29 +13,9 @@ output "elasticache_endpoint" {
   value       = aws_elasticache_replication_group.redis.primary_endpoint_address
 }
 
-output "rag_documents_bucket" {
-  description = "S3 bucket for raw RAG enterprise document storage."
-  value       = aws_s3_bucket.rag_documents.bucket
-}
-
-output "opensearch_endpoint" {
-  description = "HTTPS endpoint for the Amazon OpenSearch Service Managed Cluster."
-  value       = aws_opensearch_domain.rag_vector_store.endpoint
-}
-
-output "sagemaker_llm_endpoint_name" {
-  description = "Name of the SageMaker Real-Time LLM generation endpoint."
-  value       = aws_sagemaker_endpoint.llm_reasoning.name
-}
-
-output "sagemaker_embedding_endpoint_name" {
-  description = "Name of the SageMaker Embedding inference endpoint."
-  value       = aws_sagemaker_endpoint.embeddings.name
-}
-
-output "mlflow_tracking_server_arn" {
-  description = "ARN of the SageMaker Managed MLflow tracking server."
-  value       = aws_sagemaker_mlflow_tracking_server.tracking.arn
+output "external_s3_document_bucket" {
+  description = "Configured external S3 bucket name for tenant documents."
+  value       = var.s3_document_bucket_name
 }
 
 output "ecr_repository_urls" {
@@ -43,4 +23,46 @@ output "ecr_repository_urls" {
   value = {
     for k, v in aws_ecr_repository.repos : k => v.repository_url
   }
+}
+
+output "frontend_s3_bucket_name" {
+  description = "S3 bucket name for frontend static asset deployments."
+  value       = aws_s3_bucket.frontend.bucket
+}
+
+output "frontend_s3_bucket_arn" {
+  description = "ARN of the frontend S3 bucket."
+  value       = aws_s3_bucket.frontend.arn
+}
+
+output "frontend_cloudfront_distributions" {
+  description = "Map of CloudFront distribution metadata per frontend application."
+  value = {
+    for app, dist in aws_cloudfront_distribution.frontend : app => {
+      distribution_id = dist.id
+      domain_name     = dist.domain_name
+      origin_path     = "/${app}"
+      s3_prefix       = "${aws_s3_bucket.frontend.bucket}/${app}/"
+    }
+  }
+}
+
+output "client_portal_cloudfront_domain_name" {
+  description = "Public CloudFront domain name for client-portal."
+  value       = aws_cloudfront_distribution.frontend["client-portal"].domain_name
+}
+
+output "oem_backoffice_cloudfront_domain_name" {
+  description = "Public CloudFront domain name for oem-backoffice."
+  value       = aws_cloudfront_distribution.frontend["oem-backoffice"].domain_name
+}
+
+output "client_portal_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for client-portal cache invalidations."
+  value       = aws_cloudfront_distribution.frontend["client-portal"].id
+}
+
+output "oem_backoffice_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for oem-backoffice cache invalidations."
+  value       = aws_cloudfront_distribution.frontend["oem-backoffice"].id
 }
