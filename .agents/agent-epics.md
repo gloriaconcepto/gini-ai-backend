@@ -152,10 +152,26 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Architect multi-cloud Terraform stacks for Azure Container Apps and AWS ECS/RDS/Redis.
 - [x] Operations & power control automation (`scripts/aws-power.sh`, `scripts/azure-power.sh`).
 
-### Epic 10: Document AI Ingestion Pipeline & Knowledge Base Indexing (Future Scope)
+### Epic 10: Multi-Tenant S3 Document Ingestion & Authorization Metadata Contract (Decoupled RAG Pipeline)
 
-- [ ] Document text extraction pipeline for PDF, DOCX, and TXT files.
-- [ ] Semantic chunking and metadata attribution module.
-- [ ] BullMQ ingestion worker to generate dense embeddings via `IEmbeddingProvider` and index vectors via `IVectorStore`.
-- [ ] Secure Gateway document upload endpoint with file validation, tenant isolation, and async queue dispatch.
-- [ ] RAG citation and grounded source attribution validation.
+- [x] S3 Storage Port & Adapters:
+  - [x] Install `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner`.
+  - [x] Implement `IStorageService` interface, `S3StorageService` (AWS SDK v3), and `MockStorageService` for local/offline testing.
+  - [x] Configure S3 layout `s3://gini-rag-documents/<tenant-id>/` with default region `us-west-2`.
+- [x] Deterministic S3 File Pairing Contract (Schema v1.0):
+  - [x] Auto-generate matching metadata JSON using identical filename stem: `{filename-stem}.{ext}` and `{filename-stem}.metadata.json`.
+  - [x] Enforce Schema v1.0 contract: `schema_version`, `tenant_id`, `document` (id, name, version, categories), `access` (departments, allowed_users, excluded_users), `metadata` (updated_at).
+- [x] Decoupled Authorization Lifecycle:
+  - [x] Implement `PATCH /documents/:id/access` to update department and user permissions and rewrite `{filename-stem}.metadata.json` directly on S3 without re-uploading or reprocessing the source document.
+- [x] Direct Upload & State Machine:
+  - [x] Presigned PUT URL generation via `POST /documents/upload-url` (status: `PENDING_UPLOAD`).
+  - [x] Direct multipart streaming fallback via `POST /documents/upload`.
+  - [x] Verification and completion via `POST /documents/:id/complete` (S3 HeadObject verification, write metadata JSON, transition to `UPLOADED`).
+  - [x] Query and status display via `GET /documents/:id`, `GET /documents` (paginated, filters), and `GET /documents/summary`.
+  - [x] Secure presigned download via `GET /documents/:id/download-url`.
+  - [x] Purge file pair from S3 via `DELETE /documents/:id`.
+- [x] Persistence & Tenant Isolation:
+  - [x] Implement `InMemoryDocumentRepository` implementing `IDocumentRepository` with strict `tenantId` isolation (prepped for Drizzle ORM in Epic 7).
+- [x] Contracts & Coverage:
+  - [x] Export updated OpenAPI specification into `/contracts/openapi.json` (51 paths, 54 schemas).
+  - [x] Achieve >95% test coverage across repository, service, storage adapters, and controller.

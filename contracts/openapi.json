@@ -2350,6 +2350,514 @@
           "AI & RAG Services"
         ]
       }
+    },
+    "/documents/upload-url": {
+      "post": {
+        "description": "Creates a document record in PENDING_UPLOAD status and generates an S3 presigned PUT URL for direct-to-S3 upload in the tenant directory.",
+        "operationId": "DocumentsController_generateUploadUrl",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitiateUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Presigned upload URL generated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate presigned S3 direct upload URL",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents/upload": {
+      "post": {
+        "description": "Directly streams an uploaded file to the tenant directory on S3 and immediately writes its accompanying .metadata.json file.",
+        "operationId": "DocumentsController_directUpload",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "name": {
+                    "type": "string",
+                    "example": "Performance Policy"
+                  },
+                  "version": {
+                    "type": "string",
+                    "example": "1.0"
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": [
+                      "security-risk"
+                    ]
+                  },
+                  "departments": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": [
+                      "technology"
+                    ]
+                  },
+                  "allowedUsers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": []
+                  },
+                  "excludedUsers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "example": [
+                      "user-alex-rivera"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File and metadata uploaded successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Direct multipart file upload to S3",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents/{id}/complete": {
+      "post": {
+        "description": "Verifies the uploaded file exists on S3, writes the paired .metadata.json file, and transitions state to UPLOADED.",
+        "operationId": "DocumentsController_completeUpload",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document upload confirmed and metadata written.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm direct S3 upload completion",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents/{id}/access": {
+      "patch": {
+        "description": "Updates access control rules and rewrites the .metadata.json file directly on S3 without re-uploading the source document.",
+        "operationId": "DocumentsController_updateAccess",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDocumentAccessDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authorization metadata updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update authorization metadata for document",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents/summary": {
+      "get": {
+        "description": "Returns aggregate document metrics, status distribution, and category counts for the authenticated tenant.",
+        "operationId": "DocumentsController_getSummary",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Summary statistics retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentSummaryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get document upload statistics and summary",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents/{id}": {
+      "get": {
+        "description": "Retrieves the current metadata, upload status, S3 paths, and authorization rules for a specific document.",
+        "operationId": "DocumentsController_getDocument",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document details retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get document details and upload status",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      },
+      "delete": {
+        "description": "Purges the document and its matching .metadata.json file from S3 and marks the document deleted.",
+        "operationId": "DocumentsController_deleteDocument",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Document deleted successfully."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete document and S3 file pair",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents/{id}/download-url": {
+      "get": {
+        "description": "Generates a temporary presigned GET URL to securely download the source document from S3.",
+        "operationId": "DocumentsController_getDownloadUrl",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Download URL generated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadUrlResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Generate presigned S3 download URL",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents": {
+      "get": {
+        "description": "Retrieves a paginated list of tenant documents with optional status, category, department, and search filters.",
+        "operationId": "DocumentsController_listDocuments",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PENDING_UPLOAD",
+                "UPLOADING",
+                "UPLOADED",
+                "FAILED",
+                "DELETED"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "department",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of documents retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List tenant documents",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
     }
   },
   "info": {
@@ -4011,6 +4519,468 @@
           "answer",
           "sources",
           "retrievalMode"
+        ]
+      },
+      "InitiateUploadDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Original file name including extension (e.g. performance-policy.pdf)",
+            "example": "performance-policy.pdf"
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable title or display name for the document",
+            "example": "Performance Policy"
+          },
+          "version": {
+            "type": "string",
+            "description": "Source document version string",
+            "example": "1.0",
+            "default": "1.0"
+          },
+          "categories": {
+            "description": "Document classification categories (informative, not authorization rules)",
+            "example": [
+              "security-risk",
+              "technology-architecture"
+            ],
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "departments": {
+            "description": "Departments permitted to access the document in RAG queries",
+            "example": [
+              "technology",
+              "compliance"
+            ],
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedUsers": {
+            "description": "Specific user IDs explicitly permitted to access the document",
+            "example": [
+              "user-alice-123"
+            ],
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludedUsers": {
+            "description": "Specific user IDs explicitly denied access (takes precedence over department access)",
+            "example": [
+              "user-alex-rivera",
+              "user-zainab-bello"
+            ],
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fileSize": {
+            "type": "number",
+            "description": "Declared file size in bytes",
+            "example": 1048576
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "MIME type of the document",
+            "example": "application/pdf",
+            "default": "application/octet-stream"
+          }
+        },
+        "required": [
+          "fileName"
+        ]
+      },
+      "UploadUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "fileName": {
+            "type": "string",
+            "example": "performance-policy.pdf"
+          },
+          "stem": {
+            "type": "string",
+            "example": "performance-policy"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "example": "https://gini-rag-documents.s3.us-west-2.amazonaws.com/tenant-001/performance-policy.pdf?..."
+          },
+          "s3Key": {
+            "type": "string",
+            "example": "tenant-001/performance-policy.pdf"
+          },
+          "metadataS3Key": {
+            "type": "string",
+            "example": "tenant-001/performance-policy.metadata.json"
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 900
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_UPLOAD",
+              "UPLOADING",
+              "UPLOADED",
+              "FAILED",
+              "DELETED"
+            ],
+            "example": "PENDING_UPLOAD"
+          }
+        },
+        "required": [
+          "documentId",
+          "fileName",
+          "stem",
+          "uploadUrl",
+          "s3Key",
+          "metadataS3Key",
+          "expiresIn",
+          "status"
+        ]
+      },
+      "DocumentMetadataDocumentDto": {
+        "type": "object",
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "example": "performance-policy"
+          },
+          "name": {
+            "type": "string",
+            "example": "Performance Policy"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0"
+          },
+          "categories": {
+            "example": [
+              "security-risk",
+              "technology-architecture"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "document_id",
+          "name",
+          "version",
+          "categories"
+        ]
+      },
+      "DocumentMetadataAccessDto": {
+        "type": "object",
+        "properties": {
+          "departments": {
+            "example": [
+              "technology"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowed_users": {
+            "example": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excluded_users": {
+            "example": [
+              "user-alex-rivera",
+              "user-zainab-bello"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DocumentMetadataDetailsDto": {
+        "type": "object",
+        "properties": {
+          "updated_at": {
+            "type": "string",
+            "example": "2026-10-08T09:30:00Z"
+          }
+        }
+      },
+      "IngestionMetadataV1Dto": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "example": "1.0"
+          },
+          "tenant_id": {
+            "type": "string",
+            "example": "tenant-001"
+          },
+          "document": {
+            "$ref": "#/components/schemas/DocumentMetadataDocumentDto"
+          },
+          "access": {
+            "$ref": "#/components/schemas/DocumentMetadataAccessDto"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/DocumentMetadataDetailsDto"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tenant_id",
+          "document",
+          "access"
+        ]
+      },
+      "DocumentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "tenantId": {
+            "type": "string",
+            "example": "tenant-001"
+          },
+          "fileName": {
+            "type": "string",
+            "example": "performance-policy.pdf"
+          },
+          "stem": {
+            "type": "string",
+            "example": "performance-policy"
+          },
+          "extension": {
+            "type": "string",
+            "example": ".pdf"
+          },
+          "mimeType": {
+            "type": "string",
+            "example": "application/pdf"
+          },
+          "fileSize": {
+            "type": "number",
+            "example": 1048576
+          },
+          "s3Key": {
+            "type": "string",
+            "example": "tenant-001/performance-policy.pdf"
+          },
+          "metadataS3Key": {
+            "type": "string",
+            "example": "tenant-001/performance-policy.metadata.json"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_UPLOAD",
+              "UPLOADING",
+              "UPLOADED",
+              "FAILED",
+              "DELETED"
+            ],
+            "example": "UPLOADED"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/IngestionMetadataV1Dto"
+          },
+          "uploadedBy": {
+            "type": "string",
+            "example": "user-admin-123"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "example": "2026-10-13T16:00:00Z"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-10-13T15:55:00Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "example": "2026-10-13T16:00:00Z"
+          },
+          "errorMessage": {
+            "type": "string",
+            "example": "File verification failed on S3"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "fileName",
+          "stem",
+          "extension",
+          "mimeType",
+          "fileSize",
+          "s3Key",
+          "metadataS3Key",
+          "status",
+          "metadata",
+          "uploadedBy",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateDocumentAccessDto": {
+        "type": "object",
+        "properties": {
+          "departments": {
+            "description": "Departments permitted to access the document in RAG queries",
+            "example": [
+              "technology",
+              "legal"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowedUsers": {
+            "description": "Specific user IDs explicitly permitted to access the document",
+            "example": [
+              "user-alice-123"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "excludedUsers": {
+            "description": "Specific user IDs explicitly denied access (takes precedence over department access)",
+            "example": [
+              "user-alex-rivera"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categories": {
+            "description": "Updated categories for document classification",
+            "example": [
+              "security-risk",
+              "policy-compliance"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DocumentSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "totalDocuments": {
+            "type": "number",
+            "example": 10
+          },
+          "totalSizeBytes": {
+            "type": "number",
+            "example": 52428800
+          },
+          "statusCounts": {
+            "type": "object",
+            "example": {
+              "PENDING_UPLOAD": 2,
+              "UPLOADING": 1,
+              "UPLOADED": 7,
+              "FAILED": 0,
+              "DELETED": 0
+            }
+          },
+          "categoryCounts": {
+            "type": "object",
+            "example": {
+              "security-risk": 5,
+              "technology-architecture": 3
+            }
+          }
+        },
+        "required": [
+          "totalDocuments",
+          "totalSizeBytes",
+          "statusCounts",
+          "categoryCounts"
+        ]
+      },
+      "DownloadUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "downloadUrl": {
+            "type": "string",
+            "example": "https://gini-rag-documents.s3.us-west-2.amazonaws.com/tenant-001/performance-policy.pdf?..."
+          },
+          "expiresIn": {
+            "type": "number",
+            "example": 300
+          }
+        },
+        "required": [
+          "downloadUrl",
+          "expiresIn"
+        ]
+      },
+      "DocumentListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponseDto"
+            }
+          },
+          "total": {
+            "type": "number",
+            "example": 1
+          },
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "limit": {
+            "type": "number",
+            "example": 20
+          },
+          "totalPages": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "limit",
+          "totalPages"
         ]
       }
     }

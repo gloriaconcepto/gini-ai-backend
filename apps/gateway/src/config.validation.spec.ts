@@ -18,6 +18,9 @@ describe('Config Validation', () => {
     expect(validated).toBeInstanceOf(EnvironmentVariables);
     expect(validated.NODE_ENV).toBe(Environment.Development);
     expect(validated.PORT).toBe(3000);
+    expect(validated.AWS_S3_BUCKET_NAME).toBe('gini-rag-documents');
+    expect(validated.AWS_S3_REGION).toBe('us-west-2');
+    expect(validated.AWS_S3_PRESIGNED_EXPIRATION_SECONDS).toBe(900);
   });
 
   it('should throw an error when an invalid enum is provided', () => {
