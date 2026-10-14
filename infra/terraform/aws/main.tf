@@ -493,6 +493,18 @@ resource "aws_ecs_cluster" "main" {
   }
 }
 
+resource "aws_ecs_cluster_capacity_providers" "main" {
+  cluster_name = aws_ecs_cluster.main.name
+
+  capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+
+  default_capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+    base              = 1
+  }
+}
+
 # -----------------------------------------------------------------------------
 # 9. IAM ROLES FOR ECS FARGATE TASKS
 # -----------------------------------------------------------------------------
@@ -634,6 +646,8 @@ resource "aws_ecs_task_definition" "gateway" {
         { name = "APP_ENV", value = "remote" },
         { name = "PORT", value = "3000" },
         { name = "AWS_REGION", value = var.aws_region },
+        { name = "KEYCLOAK_URL", value = "http://${aws_lb.alb.dns_name}" },
+        { name = "KEYCLOAK_ADMIN_CLIENT_ID", value = var.keycloak_admin_client_id },
         { name = "REDIS_HOST", value = aws_elasticache_replication_group.redis.primary_endpoint_address },
         { name = "REDIS_PORT", value = "6379" },
         { name = "AWS_S3_BUCKET_NAME", value = var.s3_document_bucket_name },
@@ -672,7 +686,12 @@ resource "aws_ecs_service" "gateway" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.gateway.arn
   desired_count   = var.enable_scale_to_zero ? 0 : 1
-  launch_type     = "FARGATE"
+
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+    base              = 1
+  }
 
   network_configuration {
     subnets          = aws_subnet.private_app[*].id
@@ -687,10 +706,10 @@ resource "aws_ecs_service" "gateway" {
   }
 
   lifecycle {
-    ignore_changes = [task_definition, desired_count]
+    ignore_changes = [desired_count]
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.http, aws_ecs_cluster_capacity_providers.main]
 
   tags = {
     Name = "${var.project_name}-gateway-service-${var.environment}"

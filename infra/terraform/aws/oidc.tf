@@ -19,6 +19,11 @@ resource "aws_iam_openid_connect_provider" "github" {
   }
 }
 
+locals {
+  github_repo_owner = split("/", var.github_repo)[0]
+  github_repo_name  = split("/", var.github_repo)[1]
+}
+
 # 2. IAM Role for GitHub Actions
 resource "aws_iam_role" "github_deploy" {
   name = "role-github-actions-deploy-${var.environment}"
@@ -37,7 +42,10 @@ resource "aws_iam_role" "github_deploy" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${var.github_repo}:*",
+              "repo:${local.github_repo_owner}*/${local.github_repo_name}*:*"
+            ]
           }
         }
       }

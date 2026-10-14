@@ -64,6 +64,12 @@ variable "keycloak_admin_password" {
   sensitive   = true
 }
 
+variable "keycloak_admin_client_id" {
+  description = "Keycloak confidential client ID for Gateway administrative access."
+  type        = string
+  default     = "gini-gateway-service"
+}
+
 variable "keycloak_admin_client_secret" {
   description = "Client secret for the gateway admin client in Keycloak master realm."
   type        = string
