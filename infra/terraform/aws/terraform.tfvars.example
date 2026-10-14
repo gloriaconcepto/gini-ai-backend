@@ -8,6 +8,7 @@ vpc_cidr                         = "10.0.0.0/16"
 db_admin_username                = "pgadmin"
 db_admin_password                = "zigqiz-dafbir-gyqGi8"
 rds_instance_class               = "db.t4g.micro"
+rds_engine_version               = "16.15"
 rds_max_allocated_storage        = 50
 
 # Keycloak Credentials
@@ -20,3 +21,7 @@ s3_document_bucket_name          = "gini-rag-documents"
 
 # Optional CORS Origins
 cors_origins                     = "https://portal.gini.ai,https://admin.gini.ai"
+
+# Frontend Web Hosting (CloudFront + S3) - set to false while waiting for CloudFront account verification
+enable_frontend                  = false
+

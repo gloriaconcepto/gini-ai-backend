@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "The AWS Region in which all resources will be provisioned."
   type        = string
-  default     = "us-east-1"
+  default     = "us-west-2"
 }
 
 variable "project_name" {
@@ -38,6 +38,12 @@ variable "rds_instance_class" {
   description = "Instance class for the Amazon RDS PostgreSQL instance."
   type        = string
   default     = "db.t4g.micro"
+}
+
+variable "rds_engine_version" {
+  description = "PostgreSQL engine version for Amazon RDS."
+  type        = string
+  default     = "16.15"
 }
 
 variable "rds_max_allocated_storage" {
@@ -87,3 +93,17 @@ variable "frontend_price_class" {
   type        = string
   default     = "PriceClass_100"
 }
+
+variable "enable_frontend" {
+  description = "Whether to provision CloudFront CDN distributions and S3 hosting for the frontend SPAs."
+  type        = bool
+  default     = false
+}
+
+variable "github_repo" {
+  description = "GitHub repository for GitHub Actions OIDC federation (format: owner/repo)."
+  type        = string
+  default     = "gloriaconcepto/gini-ai-backend"
+}
+
+

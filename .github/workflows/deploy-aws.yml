@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: us-west-2
   ECS_CLUSTER: ecs-gini-ai-dev
   ECS_SERVICE: gateway-service
   ECR_REPOSITORY: gini-ai-gateway-dev

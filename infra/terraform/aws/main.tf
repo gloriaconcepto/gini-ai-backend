@@ -303,8 +303,9 @@ resource "aws_db_parameter_group" "pg16" {
   family = "postgres16"
 
   parameter {
-    name  = "shared_preload_libraries"
-    value = "pg_stat_statements"
+    name         = "shared_preload_libraries"
+    value        = "pg_stat_statements"
+    apply_method = "pending-reboot"
   }
 
   tags = {
@@ -313,23 +314,24 @@ resource "aws_db_parameter_group" "pg16" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier             = "psql-${var.project_name}-${var.environment}-${random_string.suffix.result}"
-  engine                 = "postgres"
-  engine_version         = "16.4"
-  instance_class         = var.rds_instance_class
-  allocated_storage      = 20
-  max_allocated_storage  = var.rds_max_allocated_storage
-  storage_type           = "gp3"
-  apply_immediately      = true
-  db_name                = "ginidb"
-  username               = var.db_admin_username
-  password               = var.db_admin_password
-  db_subnet_group_name   = aws_db_subnet_group.rds.name
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  parameter_group_name   = aws_db_parameter_group.pg16.name
-  publicly_accessible    = false
-  skip_final_snapshot    = true
-  deletion_protection    = false
+  identifier                 = "psql-${var.project_name}-${var.environment}-${random_string.suffix.result}"
+  engine                     = "postgres"
+  engine_version             = var.rds_engine_version
+  auto_minor_version_upgrade = true
+  instance_class             = var.rds_instance_class
+  allocated_storage          = 20
+  max_allocated_storage      = var.rds_max_allocated_storage
+  storage_type               = "gp3"
+  apply_immediately          = true
+  db_name                    = "ginidb"
+  username                   = var.db_admin_username
+  password                   = var.db_admin_password
+  db_subnet_group_name       = aws_db_subnet_group.rds.name
+  vpc_security_group_ids     = [aws_security_group.rds.id]
+  parameter_group_name       = aws_db_parameter_group.pg16.name
+  publicly_accessible        = false
+  skip_final_snapshot        = true
+  deletion_protection        = false
 
   tags = {
     Name = "psql-${var.project_name}-${var.environment}"
@@ -495,7 +497,7 @@ resource "aws_ecs_cluster" "main" {
 # 9. IAM ROLES FOR ECS FARGATE TASKS
 # -----------------------------------------------------------------------------
 resource "aws_iam_role" "ecs_task_execution" {
-  name = "role-ecs-task-execution-${var.environment}"
+  name = "role-ecs-task-execution-${var.environment}-${random_string.suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -517,7 +519,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
 }
 
 resource "aws_iam_policy" "secrets_read" {
-  name        = "policy-ecs-secrets-read-${var.environment}"
+  name        = "policy-ecs-secrets-read-${var.environment}-${random_string.suffix.result}"
   description = "Allows ECS tasks to read Secrets Manager secrets"
 
   policy = jsonencode({
@@ -542,7 +544,7 @@ resource "aws_iam_role_policy_attachment" "ecs_secrets" {
 
 # Task Role (Grants Gateway & Workers permission to access external S3 document storage)
 resource "aws_iam_role" "ecs_task" {
-  name = "role-ecs-task-${var.environment}"
+  name = "role-ecs-task-${var.environment}-${random_string.suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -559,7 +561,7 @@ resource "aws_iam_role" "ecs_task" {
 }
 
 resource "aws_iam_policy" "ecs_task_permissions" {
-  name        = "policy-ecs-task-permissions-${var.environment}"
+  name        = "policy-ecs-task-permissions-${var.environment}-${random_string.suffix.result}"
   description = "Permissions for Gateway to access external S3 document storage"
 
   policy = jsonencode({

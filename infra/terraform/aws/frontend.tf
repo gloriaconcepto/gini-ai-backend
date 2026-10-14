@@ -4,19 +4,21 @@
 # Serves static web assets for the single-page application (SPA) frontends
 # ("client-portal" and "oem-backoffice") out of a unified S3 bucket globally
 # over HTTPS with edge caching, isolated origin paths, and client-side routing fallback.
+# Conditionalized via var.enable_frontend.
 # =============================================================================
 
 locals {
-  frontend_apps = toset([
+  frontend_apps = var.enable_frontend ? toset([
     "client-portal",
     "oem-backoffice",
-  ])
+  ]) : toset([])
 }
 
 # -----------------------------------------------------------------------------
 # 1. S3 BUCKET FOR STATIC FRONTEND HOSTING
 # -----------------------------------------------------------------------------
 resource "aws_s3_bucket" "frontend" {
+  count         = var.enable_frontend ? 1 : 0
   bucket        = "${var.project_name}-frontend-${var.environment}-${random_string.suffix.result}"
   force_destroy = var.environment == "dev"
 
@@ -27,7 +29,8 @@ resource "aws_s3_bucket" "frontend" {
 }
 
 resource "aws_s3_bucket_versioning" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  count  = var.enable_frontend ? 1 : 0
+  bucket = aws_s3_bucket.frontend[0].id
 
   versioning_configuration {
     status = "Enabled"
@@ -35,7 +38,8 @@ resource "aws_s3_bucket_versioning" "frontend" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  count  = var.enable_frontend ? 1 : 0
+  bucket = aws_s3_bucket.frontend[0].id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -45,7 +49,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  count  = var.enable_frontend ? 1 : 0
+  bucket = aws_s3_bucket.frontend[0].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -56,7 +61,7 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 # Initial placeholder index.html for each app prefix (overwritten by CI/CD build uploads)
 resource "aws_s3_object" "app_index_placeholder" {
   for_each     = local.frontend_apps
-  bucket       = aws_s3_bucket.frontend.id
+  bucket       = aws_s3_bucket.frontend[0].id
   key          = "${each.key}/index.html"
   content      = "<!DOCTYPE html><html><head><title>${each.key}</title></head><body><h1>${each.key} is provisioning...</h1></body></html>"
   content_type = "text/html"
@@ -70,6 +75,7 @@ resource "aws_s3_object" "app_index_placeholder" {
 # 2. ORIGIN ACCESS CONTROL (OAC)
 # -----------------------------------------------------------------------------
 resource "aws_cloudfront_origin_access_control" "frontend" {
+  count                             = var.enable_frontend ? 1 : 0
   name                              = "oac-${var.project_name}-frontend-${var.environment}-${random_string.suffix.result}"
   description                       = "Origin Access Control for ${var.project_name} frontend S3 bucket"
   origin_access_control_origin_type = "s3"
@@ -88,16 +94,16 @@ resource "aws_cloudfront_distribution" "frontend" {
   price_class         = var.frontend_price_class
 
   origin {
-    domain_name              = aws_s3_bucket.frontend.bucket_regional_domain_name
-    origin_id                = "s3-${aws_s3_bucket.frontend.id}-${each.key}"
+    domain_name              = aws_s3_bucket.frontend[0].bucket_regional_domain_name
+    origin_id                = "s3-${aws_s3_bucket.frontend[0].id}-${each.key}"
     origin_path              = "/${each.key}"
-    origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.frontend[0].id
   }
 
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD"]
-    target_origin_id = "s3-${aws_s3_bucket.frontend.id}-${each.key}"
+    target_origin_id = "s3-${aws_s3_bucket.frontend[0].id}-${each.key}"
 
     forwarded_values {
       query_string = false
@@ -150,7 +156,8 @@ resource "aws_cloudfront_distribution" "frontend" {
 # 4. S3 BUCKET POLICY (Allows all frontend CloudFront distributions via OAC)
 # -----------------------------------------------------------------------------
 resource "aws_s3_bucket_policy" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  count  = var.enable_frontend ? 1 : 0
+  bucket = aws_s3_bucket.frontend[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -162,7 +169,7 @@ resource "aws_s3_bucket_policy" "frontend" {
           Service = "cloudfront.amazonaws.com"
         }
         Action   = "s3:GetObject"
-        Resource = "${aws_s3_bucket.frontend.arn}/*"
+        Resource = "${aws_s3_bucket.frontend[0].arn}/*"
         Condition = {
           StringEquals = {
             "AWS:SourceArn" = [for dist in aws_cloudfront_distribution.frontend : dist.arn]
