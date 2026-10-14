@@ -4,9 +4,11 @@ project_name                     = "gini-ai"
 environment                      = "dev"
 vpc_cidr                         = "10.0.0.0/16"
 
-# Master Database Credentials
+# Master Database Credentials & Sizing
 db_admin_username                = "pgadmin"
 db_admin_password                = "zigqiz-dafbir-gyqGi8"
+rds_instance_class               = "db.t4g.micro"
+rds_max_allocated_storage        = 50
 
 # Keycloak Credentials
 keycloak_admin_username          = "admin"

@@ -43,7 +43,7 @@ infra/terraform/
 
 ### 2. AWS Infrastructure (`aws/`)
 - **Compute:** AWS ECS Fargate running API Gateway and BullMQ worker tasks behind an Application Load Balancer (ALB)
-- **Database:** Amazon RDS PostgreSQL 16 (Multi-AZ capable)
+- **Database:** Amazon RDS PostgreSQL 16 (configurable sizing, default `db.t4g.micro` for dev)
 - **Cache / Broker:** Amazon ElastiCache Redis 7
 - **Frontend Hosting:** Unified Amazon S3 Private Bucket with Origin Access Control (OAC) and dedicated CloudFront CDN distributions serving two distinct SPAs: `client-portal` (origin path `/client-portal`) and `oem-backoffice` (origin path `/oem-backoffice`)
 - **Networking:** Multi-AZ VPC with Public, Application, and Database subnets

@@ -316,10 +316,11 @@ resource "aws_db_instance" "postgres" {
   identifier             = "psql-${var.project_name}-${var.environment}-${random_string.suffix.result}"
   engine                 = "postgres"
   engine_version         = "16.4"
-  instance_class         = "db.t4g.medium"
+  instance_class         = var.rds_instance_class
   allocated_storage      = 20
-  max_allocated_storage  = 100
+  max_allocated_storage  = var.rds_max_allocated_storage
   storage_type           = "gp3"
+  apply_immediately      = true
   db_name                = "ginidb"
   username               = var.db_admin_username
   password               = var.db_admin_password

@@ -34,6 +34,18 @@ variable "db_admin_password" {
   sensitive   = true
 }
 
+variable "rds_instance_class" {
+  description = "Instance class for the Amazon RDS PostgreSQL instance."
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "rds_max_allocated_storage" {
+  description = "Maximum storage threshold in GiB to which RDS can automatically scale."
+  type        = number
+  default     = 50
+}
+
 variable "keycloak_admin_username" {
   description = "Master realm admin username for Keycloak."
   type        = string
