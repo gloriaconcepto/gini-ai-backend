@@ -94,17 +94,6 @@ resource "aws_subnet" "private_db" {
   }
 }
 
-# Private Search Subnets (Amazon OpenSearch Service)
-resource "aws_subnet" "private_search" {
-  count             = 2
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = cidrsubnet(var.vpc_cidr, 4, count.index + 6)
-  availability_zone = data.aws_availability_zones.available.names[count.index]
-
-  tags = {
-    Name = "snet-search-${var.environment}-${count.index + 1}"
-  }
-}
 
 # NAT Gateway for Outbound Internet Access from Private Subnets
 resource "aws_eip" "nat" {
@@ -168,11 +157,6 @@ resource "aws_route_table_association" "db" {
   route_table_id = aws_route_table.private.id
 }
 
-resource "aws_route_table_association" "search" {
-  count          = 2
-  subnet_id      = aws_subnet.private_search[count.index].id
-  route_table_id = aws_route_table.private.id
-}
 
 # -----------------------------------------------------------------------------
 # 2. SECURITY GROUPS
@@ -319,8 +303,9 @@ resource "aws_db_parameter_group" "pg16" {
   family = "postgres16"
 
   parameter {
-    name  = "shared_preload_libraries"
-    value = "pg_stat_statements"
+    name         = "shared_preload_libraries"
+    value        = "pg_stat_statements"
+    apply_method = "pending-reboot"
   }
 
   tags = {
@@ -329,22 +314,24 @@ resource "aws_db_parameter_group" "pg16" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier             = "psql-${var.project_name}-${var.environment}-${random_string.suffix.result}"
-  engine                 = "postgres"
-  engine_version         = "16.4"
-  instance_class         = "db.t4g.medium"
-  allocated_storage      = 20
-  max_allocated_storage  = 100
-  storage_type           = "gp3"
-  db_name                = "ginidb"
-  username               = var.db_admin_username
-  password               = var.db_admin_password
-  db_subnet_group_name   = aws_db_subnet_group.rds.name
-  vpc_security_group_ids = [aws_security_group.rds.id]
-  parameter_group_name   = aws_db_parameter_group.pg16.name
-  publicly_accessible    = false
-  skip_final_snapshot    = true
-  deletion_protection    = false
+  identifier                 = "psql-${var.project_name}-${var.environment}-${random_string.suffix.result}"
+  engine                     = "postgres"
+  engine_version             = var.rds_engine_version
+  auto_minor_version_upgrade = true
+  instance_class             = var.rds_instance_class
+  allocated_storage          = 20
+  max_allocated_storage      = var.rds_max_allocated_storage
+  storage_type               = "gp3"
+  apply_immediately          = true
+  db_name                    = "ginidb"
+  username                   = var.db_admin_username
+  password                   = var.db_admin_password
+  db_subnet_group_name       = aws_db_subnet_group.rds.name
+  vpc_security_group_ids     = [aws_security_group.rds.id]
+  parameter_group_name       = aws_db_parameter_group.pg16.name
+  publicly_accessible        = false
+  skip_final_snapshot        = true
+  deletion_protection        = false
 
   tags = {
     Name = "psql-${var.project_name}-${var.environment}"
@@ -360,14 +347,14 @@ resource "aws_elasticache_subnet_group" "redis" {
 }
 
 resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id = "redis-${var.project_name}-${var.environment}"
-  description          = "Redis cluster for BullMQ queue and JWKS caching"
-  node_type            = "cache.t4g.micro"
-  num_cache_clusters   = 1
-  port                 = 6379
-  subnet_group_name    = aws_elasticache_subnet_group.redis.name
-  security_group_ids   = [aws_security_group.redis.id]
-  parameter_group_name = "default.redis7"
+  replication_group_id       = "redis-${var.project_name}-${var.environment}"
+  description                = "Redis cluster for BullMQ queue and JWKS caching"
+  node_type                  = "cache.t4g.micro"
+  num_cache_clusters         = 1
+  port                       = 6379
+  subnet_group_name          = aws_elasticache_subnet_group.redis.name
+  security_group_ids         = [aws_security_group.redis.id]
+  parameter_group_name       = "default.redis7"
   at_rest_encryption_enabled = true
   transit_encryption_enabled = false
 
@@ -376,34 +363,6 @@ resource "aws_elasticache_replication_group" "redis" {
   }
 }
 
-# -----------------------------------------------------------------------------
-# 5. RAG DOCUMENT STORAGE (Amazon S3)
-# -----------------------------------------------------------------------------
-resource "aws_s3_bucket" "rag_documents" {
-  bucket        = "gini-ai-rag-documents-${var.environment}-${random_string.suffix.result}"
-  force_destroy = true
-
-  tags = {
-    Name = "gini-ai-rag-documents-${var.environment}"
-  }
-}
-
-resource "aws_s3_bucket_versioning" "rag_documents" {
-  bucket = aws_s3_bucket.rag_documents.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "rag_documents" {
-  bucket = aws_s3_bucket.rag_documents.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
 
 # -----------------------------------------------------------------------------
 # 6. CONTAINER REGISTRY (Amazon ECR)
@@ -538,7 +497,7 @@ resource "aws_ecs_cluster" "main" {
 # 9. IAM ROLES FOR ECS FARGATE TASKS
 # -----------------------------------------------------------------------------
 resource "aws_iam_role" "ecs_task_execution" {
-  name = "role-ecs-task-execution-${var.environment}"
+  name = "role-ecs-task-execution-${var.environment}-${random_string.suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -560,7 +519,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
 }
 
 resource "aws_iam_policy" "secrets_read" {
-  name        = "policy-ecs-secrets-read-${var.environment}"
+  name        = "policy-ecs-secrets-read-${var.environment}-${random_string.suffix.result}"
   description = "Allows ECS tasks to read Secrets Manager secrets"
 
   policy = jsonencode({
@@ -583,9 +542,9 @@ resource "aws_iam_role_policy_attachment" "ecs_secrets" {
   policy_arn = aws_iam_policy.secrets_read.id
 }
 
-# Task Role (Grants Gateway & Workers permission to call SageMaker, S3, OpenSearch)
+# Task Role (Grants Gateway & Workers permission to access external S3 document storage)
 resource "aws_iam_role" "ecs_task" {
-  name = "role-ecs-task-${var.environment}"
+  name = "role-ecs-task-${var.environment}-${random_string.suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -602,44 +561,24 @@ resource "aws_iam_role" "ecs_task" {
 }
 
 resource "aws_iam_policy" "ecs_task_permissions" {
-  name        = "policy-ecs-task-permissions-${var.environment}"
-  description = "Permissions for Gateway to invoke SageMaker, OpenSearch, and S3"
+  name        = "policy-ecs-task-permissions-${var.environment}-${random_string.suffix.result}"
+  description = "Permissions for Gateway to access external S3 document storage"
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      {
-        Sid    = "SageMakerInference"
-        Effect = "Allow"
-        Action = [
-          "sagemaker:InvokeEndpoint",
-          "sagemaker:InvokeEndpointWithResponseStream",
-          "sagemaker:DescribeEndpoint"
-        ]
-        Resource = "arn:aws:sagemaker:${var.aws_region}:${data.aws_caller_identity.current.account_id}:endpoint/gini-*"
-      },
-      {
-        Sid    = "OpenSearchAccess"
-        Effect = "Allow"
-        Action = [
-          "es:ESHttpGet",
-          "es:ESHttpPut",
-          "es:ESHttpPost",
-          "es:ESHttpDelete"
-        ]
-        Resource = "*"
-      },
       {
         Sid    = "S3DocumentAccess"
         Effect = "Allow"
         Action = [
           "s3:GetObject",
           "s3:PutObject",
+          "s3:DeleteObject",
           "s3:ListBucket"
         ]
         Resource = [
-          aws_s3_bucket.rag_documents.arn,
-          "${aws_s3_bucket.rag_documents.arn}/*"
+          "arn:aws:s3:::${var.s3_document_bucket_name}",
+          "arn:aws:s3:::${var.s3_document_bucket_name}/*"
         ]
       }
     ]
@@ -665,4 +604,95 @@ resource "aws_cloudwatch_log_group" "keycloak" {
 resource "aws_cloudwatch_log_group" "workers" {
   name              = "/ecs/${var.project_name}-workers-${var.environment}"
   retention_in_days = 30
+}
+
+# -----------------------------------------------------------------------------
+# 10. ECS TASK DEFINITIONS & SERVICES
+# -----------------------------------------------------------------------------
+resource "aws_ecs_task_definition" "gateway" {
+  family                   = "${var.project_name}-gateway-${var.environment}"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "gateway"
+      image     = "${aws_ecr_repository.repos["gateway"].repository_url}:latest"
+      essential = true
+      portMappings = [
+        {
+          containerPort = 3000
+          protocol      = "tcp"
+        }
+      ]
+      environment = [
+        { name = "NODE_ENV", value = "production" },
+        { name = "APP_ENV", value = "remote" },
+        { name = "PORT", value = "3000" },
+        { name = "AWS_REGION", value = var.aws_region },
+        { name = "REDIS_HOST", value = aws_elasticache_replication_group.redis.primary_endpoint_address },
+        { name = "REDIS_PORT", value = "6379" },
+        { name = "AWS_S3_BUCKET_NAME", value = var.s3_document_bucket_name },
+        { name = "AWS_S3_REGION", value = var.aws_region },
+        { name = "CORS_ORIGINS", value = var.cors_origins },
+        { name = "ALLOWED_ORIGINS", value = var.cors_origins }
+      ]
+      secrets = [
+        {
+          name      = "DATABASE_URL"
+          valueFrom = aws_secretsmanager_secret.db_url.arn
+        },
+        {
+          name      = "KEYCLOAK_ADMIN_CLIENT_SECRET"
+          valueFrom = aws_secretsmanager_secret.kc_admin_secret.arn
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.gateway.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+    }
+  ])
+
+  tags = {
+    Name = "${var.project_name}-gateway-task-${var.environment}"
+  }
+}
+
+resource "aws_ecs_service" "gateway" {
+  name            = "gateway-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.gateway.arn
+  desired_count   = var.enable_scale_to_zero ? 0 : 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.private_app[*].id
+    security_groups  = [aws_security_group.ecs.id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.gateway.arn
+    container_name   = "gateway"
+    container_port   = 3000
+  }
+
+  lifecycle {
+    ignore_changes = [task_definition, desired_count]
+  }
+
+  depends_on = [aws_lb_listener.http]
+
+  tags = {
+    Name = "${var.project_name}-gateway-service-${var.environment}"
+  }
 }

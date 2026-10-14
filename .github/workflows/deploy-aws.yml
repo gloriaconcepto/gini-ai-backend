@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: us-west-2
   ECS_CLUSTER: ecs-gini-ai-dev
   ECS_SERVICE: gateway-service
   ECR_REPOSITORY: gini-ai-gateway-dev
@@ -58,6 +58,8 @@ jobs:
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Deploy to Amazon ECS Fargate
         run: |

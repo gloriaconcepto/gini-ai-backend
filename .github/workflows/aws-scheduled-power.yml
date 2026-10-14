@@ -1,0 +1,65 @@
+name: AWS Dev Environment Cost & Power Control
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Power action to perform'
+        required: true
+        default: 'status'
+        type: choice
+        options:
+          - status
+          - stop
+          - start
+      environment:
+        description: 'Target environment (e.g., dev)'
+        required: true
+        default: 'dev'
+  schedule:
+    # Auto-stop every day in the evening at 20:00 UTC (8:00 PM UTC)
+    # Note: No auto-start schedule; environment startup is strictly manual
+    - cron: '0 20 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-west-2
+
+jobs:
+  power-management:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Make Script Executable
+        run: chmod +x ./scripts/aws-power.sh
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOYMENT_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Determine Action
+        id: determine_action
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "action=stop" >> $GITHUB_OUTPUT
+          else
+            echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Execute AWS Power Command
+        run: |
+          ACTION="${{ steps.determine_action.outputs.action }}"
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          echo "Executing action: ${ACTION} for environment: ${ENV}"
+          ./scripts/aws-power.sh "${ACTION}" -y

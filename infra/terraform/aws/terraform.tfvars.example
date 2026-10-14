@@ -1,28 +1,27 @@
 # Example AWS Terraform variables
-aws_region                       = "us-east-1"
+aws_region                       = "us-west-2"
 project_name                     = "gini-ai"
 environment                      = "dev"
 vpc_cidr                         = "10.0.0.0/16"
 
-# Master Database Credentials
+# Master Database Credentials & Sizing
 db_admin_username                = "pgadmin"
-db_admin_password                = "ReplaceWithSecurePassword123!"
+db_admin_password                = "zigqiz-dafbir-gyqGi8"
+rds_instance_class               = "db.t4g.micro"
+rds_engine_version               = "16.15"
+rds_max_allocated_storage        = 50
 
 # Keycloak Credentials
 keycloak_admin_username          = "admin"
-keycloak_admin_password          = "ReplaceWithSecurePassword123!"
-keycloak_admin_client_secret     = "ReplaceWithSecureClientSecret123!"
+keycloak_admin_password          = "zigqiz-dafbir-gyqGi8"
+keycloak_admin_client_secret     = "zigqiz-dafbir-gyqGi8"
 
-# OpenSearch Configuration (Managed Cluster with EBS Storage for Dev/Staging cost control)
-opensearch_instance_type         = "t3.medium.search"
-opensearch_instance_count        = 2
-opensearch_ebs_volume_size       = 20
-
-# SageMaker Real-Time Endpoint Configuration
-sagemaker_llm_instance_type       = "ml.g5.2xlarge"
-sagemaker_llm_instance_count      = 1
-sagemaker_embedding_instance_type = "ml.g5.xlarge"
-sagemaker_embedding_instance_count = 1
+# External RAG Document Storage (Provisioned in standalone RAG repo)
+s3_document_bucket_name          = "gini-rag-documents"
 
 # Optional CORS Origins
 cors_origins                     = "https://portal.gini.ai,https://admin.gini.ai"
+
+# Frontend Web Hosting (CloudFront + S3) - set to false while waiting for CloudFront account verification
+enable_frontend                  = false
+

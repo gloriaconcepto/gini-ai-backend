@@ -3,6 +3,21 @@ output "alb_dns_name" {
   value       = aws_lb.alb.dns_name
 }
 
+output "gateway_url" {
+  description = "Public HTTP URL for the NestJS API Gateway."
+  value       = "http://${aws_lb.alb.dns_name}"
+}
+
+output "swagger_docs_url" {
+  description = "Public URL for Swagger / OpenAPI documentation."
+  value       = "http://${aws_lb.alb.dns_name}/api/docs"
+}
+
+output "keycloak_url" {
+  description = "Public URL for Keycloak Identity Provider (ALB path routing)."
+  value       = "http://${aws_lb.alb.dns_name}"
+}
+
 output "rds_endpoint" {
   description = "Connection endpoint for Amazon RDS PostgreSQL."
   value       = aws_db_instance.postgres.endpoint
@@ -13,29 +28,9 @@ output "elasticache_endpoint" {
   value       = aws_elasticache_replication_group.redis.primary_endpoint_address
 }
 
-output "rag_documents_bucket" {
-  description = "S3 bucket for raw RAG enterprise document storage."
-  value       = aws_s3_bucket.rag_documents.bucket
-}
-
-output "opensearch_endpoint" {
-  description = "HTTPS endpoint for the Amazon OpenSearch Service Managed Cluster."
-  value       = aws_opensearch_domain.rag_vector_store.endpoint
-}
-
-output "sagemaker_llm_endpoint_name" {
-  description = "Name of the SageMaker Real-Time LLM generation endpoint."
-  value       = aws_sagemaker_endpoint.llm_reasoning.name
-}
-
-output "sagemaker_embedding_endpoint_name" {
-  description = "Name of the SageMaker Embedding inference endpoint."
-  value       = aws_sagemaker_endpoint.embeddings.name
-}
-
-output "mlflow_tracking_server_arn" {
-  description = "ARN of the SageMaker Managed MLflow tracking server."
-  value       = aws_sagemaker_mlflow_tracking_server.tracking.arn
+output "external_s3_document_bucket" {
+  description = "Configured external S3 bucket name for tenant documents."
+  value       = var.s3_document_bucket_name
 }
 
 output "ecr_repository_urls" {
@@ -44,3 +39,51 @@ output "ecr_repository_urls" {
     for k, v in aws_ecr_repository.repos : k => v.repository_url
   }
 }
+
+output "frontend_s3_bucket_name" {
+  description = "S3 bucket name for frontend static asset deployments."
+  value       = var.enable_frontend ? aws_s3_bucket.frontend[0].bucket : null
+}
+
+output "frontend_s3_bucket_arn" {
+  description = "ARN of the frontend S3 bucket."
+  value       = var.enable_frontend ? aws_s3_bucket.frontend[0].arn : null
+}
+
+output "frontend_cloudfront_distributions" {
+  description = "Map of CloudFront distribution metadata per frontend application."
+  value = var.enable_frontend ? {
+    for app, dist in aws_cloudfront_distribution.frontend : app => {
+      distribution_id = dist.id
+      domain_name     = dist.domain_name
+      origin_path     = "/${app}"
+      s3_prefix       = "${aws_s3_bucket.frontend[0].bucket}/${app}/"
+    }
+  } : {}
+}
+
+output "client_portal_cloudfront_domain_name" {
+  description = "Public CloudFront domain name for client-portal."
+  value       = var.enable_frontend ? aws_cloudfront_distribution.frontend["client-portal"].domain_name : null
+}
+
+output "oem_backoffice_cloudfront_domain_name" {
+  description = "Public CloudFront domain name for oem-backoffice."
+  value       = var.enable_frontend ? aws_cloudfront_distribution.frontend["oem-backoffice"].domain_name : null
+}
+
+output "client_portal_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for client-portal cache invalidations."
+  value       = var.enable_frontend ? aws_cloudfront_distribution.frontend["client-portal"].id : null
+}
+
+output "oem_backoffice_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for oem-backoffice cache invalidations."
+  value       = var.enable_frontend ? aws_cloudfront_distribution.frontend["oem-backoffice"].id : null
+}
+
+output "github_deployment_role_arn" {
+  description = "IAM Role ARN to configure as AWS_DEPLOYMENT_ROLE_ARN secret in GitHub Actions."
+  value       = aws_iam_role.github_deploy.arn
+}
+

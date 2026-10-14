@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "The AWS Region in which all resources will be provisioned."
   type        = string
-  default     = "us-east-1"
+  default     = "us-west-2"
 }
 
 variable "project_name" {
@@ -34,6 +34,24 @@ variable "db_admin_password" {
   sensitive   = true
 }
 
+variable "rds_instance_class" {
+  description = "Instance class for the Amazon RDS PostgreSQL instance."
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "rds_engine_version" {
+  description = "PostgreSQL engine version for Amazon RDS."
+  type        = string
+  default     = "16.15"
+}
+
+variable "rds_max_allocated_storage" {
+  description = "Maximum storage threshold in GiB to which RDS can automatically scale."
+  type        = number
+  default     = 50
+}
+
 variable "keycloak_admin_username" {
   description = "Master realm admin username for Keycloak."
   type        = string
@@ -52,50 +70,14 @@ variable "keycloak_admin_client_secret" {
   sensitive   = true
 }
 
-variable "opensearch_instance_type" {
-  description = "Instance type for the Amazon OpenSearch Managed Cluster (EBS-backed)."
+variable "s3_document_bucket_name" {
+  description = "Name of the external S3 bucket managed by the standalone RAG pipeline for tenant documents."
   type        = string
-  default     = "t3.medium.search"
-}
-
-variable "opensearch_instance_count" {
-  description = "Number of data nodes in the OpenSearch cluster."
-  type        = number
-  default     = 2
-}
-
-variable "opensearch_ebs_volume_size" {
-  description = "EBS storage volume size in GB per OpenSearch data node."
-  type        = number
-  default     = 20
-}
-
-variable "sagemaker_llm_instance_type" {
-  description = "Instance type for the SageMaker Real-Time LLM Endpoint."
-  type        = string
-  default     = "ml.g5.2xlarge"
-}
-
-variable "sagemaker_llm_instance_count" {
-  description = "Number of instances for the SageMaker Real-Time LLM Endpoint."
-  type        = number
-  default     = 1
-}
-
-variable "sagemaker_embedding_instance_type" {
-  description = "Instance type for the SageMaker Embedding Endpoint."
-  type        = string
-  default     = "ml.g5.xlarge"
-}
-
-variable "sagemaker_embedding_instance_count" {
-  description = "Number of instances for the SageMaker Embedding Endpoint."
-  type        = number
-  default     = 1
+  default     = "gini-rag-documents"
 }
 
 variable "enable_scale_to_zero" {
-  description = "Whether to configure ECS services and SageMaker to scale to zero during idle/off-hours."
+  description = "Whether to configure ECS services to scale to zero during idle/off-hours."
   type        = bool
   default     = false
 }
@@ -105,3 +87,23 @@ variable "cors_origins" {
   type        = string
   default     = ""
 }
+
+variable "frontend_price_class" {
+  description = "CloudFront distribution price class for the frontend SPA (PriceClass_100, PriceClass_200, PriceClass_All)."
+  type        = string
+  default     = "PriceClass_100"
+}
+
+variable "enable_frontend" {
+  description = "Whether to provision CloudFront CDN distributions and S3 hosting for the frontend SPAs."
+  type        = bool
+  default     = false
+}
+
+variable "github_repo" {
+  description = "GitHub repository for GitHub Actions OIDC federation (format: owner/repo)."
+  type        = string
+  default     = "gloriaconcepto/gini-ai-backend"
+}
+
+

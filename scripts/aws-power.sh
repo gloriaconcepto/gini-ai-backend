@@ -2,9 +2,8 @@
 # ==============================================================================
 # aws-power.sh - AWS Environment Power & Cost Control Manager
 # ==============================================================================
-# Manages power states (stop, start, status) for Amazon RDS PostgreSQL, Amazon
-# ECS Fargate services, Amazon OpenSearch, and AWS SageMaker AI endpoints to
-# eliminate idle compute charges during off-hours.
+# Manages power states (stop, start, status) for Amazon RDS PostgreSQL and
+# Amazon ECS Fargate services to eliminate idle compute charges during off-hours.
 #
 # Usage:
 #   ./scripts/aws-power.sh status
@@ -16,7 +15,7 @@ set -euo pipefail
 
 PROJECT_NAME="${PROJECT_NAME:-gini-ai}"
 ENVIRONMENT="${ENVIRONMENT:-dev}"
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-us-west-2}"
 AUTO_APPROVE=false
 
 # ANSI colors
@@ -128,44 +127,6 @@ show_status() {
     done
   else
     log_warn "No active ECS services found in cluster '${cluster_name}'."
-  fi
-
-  # 3. Amazon OpenSearch Domain
-  log_header "3. Amazon OpenSearch Service"
-  local domain_name="${PROJECT_NAME}-rag-${ENVIRONMENT}"
-  local os_status
-  os_status=$(aws opensearch describe-domain --domain-name "$domain_name" --region "$AWS_REGION" \
-    --query "DomainStatus.{created:Created, processing:Processing, endpoint:Endpoint}" --output text 2>/dev/null || echo "Not Found")
-
-  if [[ "$os_status" != "Not Found" ]]; then
-    echo -e "  Domain:   ${BOLD}${domain_name}${RESET}"
-    echo -e "  Endpoint: https://$(echo "$os_status" | awk '{print $3}')"
-  else
-    log_warn "OpenSearch domain '${domain_name}' not provisioned yet."
-  fi
-
-  # 4. AWS SageMaker Endpoints
-  log_header "4. AWS SageMaker AI Endpoints"
-  local sm_endpoints
-  sm_endpoints=$(aws sagemaker list-endpoints --region "$AWS_REGION" \
-    --name-contains "gini-" --query "Endpoints[].{name:EndpointName, status:EndpointStatus}" --output text 2>/dev/null || echo "")
-
-  if [[ -n "$sm_endpoints" ]]; then
-    printf "  %-35s %-20s\n" "Endpoint Name" "Status"
-    printf "  %-35s %-20s\n" "-----------------------------------" "--------------------"
-    while IFS= read -r line; do
-      [[ -z "$line" ]] && continue
-      local ep_name ep_stat
-      ep_name=$(echo "$line" | awk '{print $1}')
-      ep_stat=$(echo "$line" | awk '{print $2}')
-      local ep_colored="$ep_stat"
-      if [[ "$ep_stat" == "InService" ]]; then
-        ep_colored="${GREEN}InService${RESET}"
-      fi
-      printf "  %-35s %-20b\n" "$ep_name" "$ep_colored"
-    done <<< "$sm_endpoints"
-  else
-    log_info "No active SageMaker endpoints detected with prefix 'gini-'."
   fi
 }
 
