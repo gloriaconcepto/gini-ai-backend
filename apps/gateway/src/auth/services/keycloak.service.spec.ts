@@ -277,6 +277,7 @@ describe('KeycloakService', () => {
         realm: `tenant-${tenantId}`,
         displayName: tenantName,
         enabled: true,
+        sslRequired: 'NONE',
         loginTheme: 'gini-theme',
         accountTheme: 'gini-theme',
         adminTheme: 'gini-theme',
