@@ -36,6 +36,17 @@ resource "random_string" "suffix" {
   upper   = false
 }
 
+locals {
+  frontend_cors_origins = var.enable_frontend ? join(",", [
+    "https://${aws_cloudfront_distribution.frontend["client-portal"].domain_name}",
+    "https://${aws_cloudfront_distribution.frontend["oem-backoffice"].domain_name}",
+    "https://${aws_cloudfront_distribution.api[0].domain_name}"
+  ]) : ""
+  effective_cors_origins = var.cors_origins != "" ? (
+    local.frontend_cors_origins != "" ? "${var.cors_origins},${local.frontend_cors_origins}" : var.cors_origins
+  ) : local.frontend_cors_origins
+}
+
 # -----------------------------------------------------------------------------
 # 1. NETWORKING: MULTI-AZ VPC & SUBNETS
 # -----------------------------------------------------------------------------
@@ -404,6 +415,26 @@ resource "aws_secretsmanager_secret_version" "kc_admin_secret" {
   secret_string = var.keycloak_admin_client_secret
 }
 
+resource "aws_secretsmanager_secret" "db_password" {
+  name                    = "${var.project_name}/${var.environment}/db-password"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = var.db_admin_password
+}
+
+resource "aws_secretsmanager_secret" "kc_admin_password" {
+  name                    = "${var.project_name}/${var.environment}/keycloak-admin-password"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "kc_admin_password" {
+  secret_id     = aws_secretsmanager_secret.kc_admin_password.id
+  secret_string = var.keycloak_admin_password
+}
+
 # -----------------------------------------------------------------------------
 # 8. APPLICATION LOAD BALANCER & ECS CLUSTER
 # -----------------------------------------------------------------------------
@@ -592,6 +623,16 @@ resource "aws_iam_policy" "ecs_task_permissions" {
           "arn:aws:s3:::${var.s3_document_bucket_name}",
           "arn:aws:s3:::${var.s3_document_bucket_name}/*"
         ]
+      },
+      {
+        Sid    = "KMSEncryptionAccess"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -646,14 +687,14 @@ resource "aws_ecs_task_definition" "gateway" {
         { name = "APP_ENV", value = "remote" },
         { name = "PORT", value = "3000" },
         { name = "AWS_REGION", value = var.aws_region },
-        { name = "KEYCLOAK_URL", value = "http://${aws_lb.alb.dns_name}" },
+        { name = "KEYCLOAK_URL", value = var.enable_frontend ? "https://${aws_cloudfront_distribution.api[0].domain_name}" : "http://${aws_lb.alb.dns_name}" },
         { name = "KEYCLOAK_ADMIN_CLIENT_ID", value = var.keycloak_admin_client_id },
         { name = "REDIS_HOST", value = aws_elasticache_replication_group.redis.primary_endpoint_address },
         { name = "REDIS_PORT", value = "6379" },
         { name = "AWS_S3_BUCKET_NAME", value = var.s3_document_bucket_name },
         { name = "AWS_S3_REGION", value = var.aws_region },
-        { name = "CORS_ORIGINS", value = var.cors_origins },
-        { name = "ALLOWED_ORIGINS", value = var.cors_origins }
+        { name = "CORS_ORIGINS", value = local.effective_cors_origins },
+        { name = "ALLOWED_ORIGINS", value = local.effective_cors_origins }
       ]
       secrets = [
         {
@@ -713,5 +754,105 @@ resource "aws_ecs_service" "gateway" {
 
   tags = {
     Name = "${var.project_name}-gateway-service-${var.environment}"
+  }
+}
+
+resource "aws_ecs_task_definition" "keycloak" {
+  family                   = "${var.project_name}-keycloak-${var.environment}"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "1024"
+  memory                   = "2048"
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([
+    {
+      name       = "keycloak"
+      image      = "quay.io/keycloak/keycloak:24.0.0"
+      entryPoint = ["/bin/sh", "-c"]
+      command = [
+        "/opt/keycloak/bin/kc.sh start-dev & KC_PID=$!; echo 'Waiting for Keycloak to start...'; until /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user \"$KEYCLOAK_ADMIN\" --password \"$KEYCLOAK_ADMIN_PASSWORD\"; do sleep 2; done; echo 'Configuring master realm sslRequired=NONE...'; /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE || true; echo 'Assigning admin role to user admin...'; /opt/keycloak/bin/kcadm.sh add-roles -r master --uusername \"$KEYCLOAK_ADMIN\" --rolename admin || true; echo 'Configuring Gateway admin client in master realm...'; if ! /opt/keycloak/bin/kcadm.sh get clients -r master -q clientId=gini-gateway-service | grep -q 'gini-gateway-service'; then /opt/keycloak/bin/kcadm.sh create clients -r master -s clientId=gini-gateway-service -s 'name=Gini AI Gateway Service' -s enabled=true -s clientAuthenticatorType=client-secret -s secret=\"$KEYCLOAK_ADMIN_CLIENT_SECRET\" -s serviceAccountsEnabled=true -s publicClient=false -s standardFlowEnabled=false -s directAccessGrantsEnabled=false; /opt/keycloak/bin/kcadm.sh add-roles -r master --uusername service-account-gini-gateway-service --rolename admin || true; fi; echo 'Keycloak initialization complete.'; wait $KC_PID"
+      ]
+      essential = true
+      portMappings = [
+        {
+          containerPort = 8080
+          protocol      = "tcp"
+        }
+      ]
+      environment = [
+        { name = "KC_DB", value = "postgres" },
+        { name = "KC_DB_URL", value = "jdbc:postgresql://${aws_db_instance.postgres.endpoint}/ginidb" },
+        { name = "KC_DB_USERNAME", value = var.db_admin_username },
+        { name = "KEYCLOAK_ADMIN", value = var.keycloak_admin_username },
+        { name = "KC_PROXY_HEADERS", value = "xforwarded" },
+        { name = "KC_HOSTNAME_STRICT", value = "false" },
+        { name = "KC_HTTP_ENABLED", value = "true" }
+      ]
+      secrets = [
+        {
+          name      = "KC_DB_PASSWORD"
+          valueFrom = aws_secretsmanager_secret.db_password.arn
+        },
+        {
+          name      = "KEYCLOAK_ADMIN_PASSWORD"
+          valueFrom = aws_secretsmanager_secret.kc_admin_password.arn
+        },
+        {
+          name      = "KEYCLOAK_ADMIN_CLIENT_SECRET"
+          valueFrom = aws_secretsmanager_secret.kc_admin_secret.arn
+        }
+      ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.keycloak.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
+    }
+  ])
+
+  tags = {
+    Name = "${var.project_name}-keycloak-task-${var.environment}"
+  }
+}
+
+resource "aws_ecs_service" "keycloak" {
+  name            = "keycloak-service"
+  cluster         = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.keycloak.arn
+  desired_count   = var.enable_scale_to_zero ? 0 : 1
+
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 1
+    base              = 1
+  }
+
+  health_check_grace_period_seconds = 180
+
+  network_configuration {
+    subnets          = aws_subnet.private_app[*].id
+    security_groups  = [aws_security_group.ecs.id]
+    assign_public_ip = false
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.keycloak.arn
+    container_name   = "keycloak"
+    container_port   = 8080
+  }
+
+  lifecycle {
+    ignore_changes = [desired_count]
+  }
+
+  depends_on = [aws_lb_listener.http, aws_lb_listener_rule.keycloak, aws_ecs_cluster_capacity_providers.main]
+
+  tags = {
+    Name = "${var.project_name}-keycloak-service-${var.environment}"
   }
 }

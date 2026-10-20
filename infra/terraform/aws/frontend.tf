@@ -179,3 +179,74 @@ resource "aws_s3_bucket_policy" "frontend" {
     ]
   })
 }
+
+# -----------------------------------------------------------------------------
+# 5. DEDICATED API & KEYCLOAK CLOUDFRONT DISTRIBUTION (HTTPS Reverse Proxy for ALB)
+# -----------------------------------------------------------------------------
+resource "aws_cloudfront_distribution" "api" {
+  count           = var.enable_frontend ? 1 : 0
+  enabled         = true
+  is_ipv6_enabled = true
+  price_class     = var.frontend_price_class
+  comment         = "${var.project_name} HTTPS API Gateway & Keycloak reverse proxy for ALB (${var.environment})"
+
+  origin {
+    domain_name = aws_lb.alb.dns_name
+    origin_id   = "alb-backend"
+
+    custom_origin_config {
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "http-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_keepalive_timeout = 5
+      origin_read_timeout      = 60
+    }
+
+    custom_header {
+      name  = "X-Forwarded-Proto"
+      value = "https"
+    }
+
+    custom_header {
+      name  = "X-Forwarded-Port"
+      value = "443"
+    }
+  }
+
+  default_cache_behavior {
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "alb-backend"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["*"]
+
+      cookies {
+        forward = "all"
+      }
+    }
+
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 0
+    max_ttl                = 0
+    compress               = true
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  tags = {
+    Name      = "${var.project_name}-api-cdn-${var.environment}"
+    Component = "ApiCDN"
+  }
+}

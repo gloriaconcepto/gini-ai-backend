@@ -1,17 +1,17 @@
 name: Deploy API Gateway to Azure Container Apps
 
 on:
-  push:
-    branches:
-      - main
-      - development
-    paths:
-      - 'apps/gateway/**'
-      - 'libs/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tsconfig*.json'
-      - '.github/workflows/deploy-gateway.yml'
+  # push:
+  #   branches:
+  #     - main
+  #     - development
+  #   paths:
+  #     - 'apps/gateway/**'
+  #     - 'libs/**'
+  #     - 'package.json'
+  #     - 'package-lock.json'
+  #     - 'tsconfig*.json'
+  #     - '.github/workflows/deploy-gateway.yml'
   workflow_dispatch:
 
 concurrency:
