@@ -87,3 +87,28 @@ output "github_deployment_role_arn" {
   value       = aws_iam_role.github_deploy.arn
 }
 
+output "api_cloudfront_domain_name" {
+  description = "Public CloudFront domain name for HTTPS API Gateway & Keycloak reverse proxy."
+  value       = var.enable_frontend ? aws_cloudfront_distribution.api[0].domain_name : null
+}
+
+output "api_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for API reverse proxy cache invalidations."
+  value       = var.enable_frontend ? aws_cloudfront_distribution.api[0].id : null
+}
+
+output "api_gateway_https_url" {
+  description = "Public HTTPS URL for the NestJS API Gateway via CloudFront."
+  value       = var.enable_frontend ? "https://${aws_cloudfront_distribution.api[0].domain_name}" : null
+}
+
+output "swagger_docs_https_url" {
+  description = "Public HTTPS URL for Swagger / OpenAPI documentation via CloudFront."
+  value       = var.enable_frontend ? "https://${aws_cloudfront_distribution.api[0].domain_name}/api/docs" : null
+}
+
+output "keycloak_https_url" {
+  description = "Public HTTPS URL for Keycloak Identity Provider via CloudFront."
+  value       = var.enable_frontend ? "https://${aws_cloudfront_distribution.api[0].domain_name}" : null
+}
+

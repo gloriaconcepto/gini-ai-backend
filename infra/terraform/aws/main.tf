@@ -36,6 +36,17 @@ resource "random_string" "suffix" {
   upper   = false
 }
 
+locals {
+  frontend_cors_origins = var.enable_frontend ? join(",", [
+    "https://${aws_cloudfront_distribution.frontend["client-portal"].domain_name}",
+    "https://${aws_cloudfront_distribution.frontend["oem-backoffice"].domain_name}",
+    "https://${aws_cloudfront_distribution.api[0].domain_name}"
+  ]) : ""
+  effective_cors_origins = var.cors_origins != "" ? (
+    local.frontend_cors_origins != "" ? "${var.cors_origins},${local.frontend_cors_origins}" : var.cors_origins
+  ) : local.frontend_cors_origins
+}
+
 # -----------------------------------------------------------------------------
 # 1. NETWORKING: MULTI-AZ VPC & SUBNETS
 # -----------------------------------------------------------------------------
@@ -612,6 +623,16 @@ resource "aws_iam_policy" "ecs_task_permissions" {
           "arn:aws:s3:::${var.s3_document_bucket_name}",
           "arn:aws:s3:::${var.s3_document_bucket_name}/*"
         ]
+      },
+      {
+        Sid    = "KMSEncryptionAccess"
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
       }
     ]
   })
@@ -666,14 +687,14 @@ resource "aws_ecs_task_definition" "gateway" {
         { name = "APP_ENV", value = "remote" },
         { name = "PORT", value = "3000" },
         { name = "AWS_REGION", value = var.aws_region },
-        { name = "KEYCLOAK_URL", value = "http://${aws_lb.alb.dns_name}" },
+        { name = "KEYCLOAK_URL", value = var.enable_frontend ? "https://${aws_cloudfront_distribution.api[0].domain_name}" : "http://${aws_lb.alb.dns_name}" },
         { name = "KEYCLOAK_ADMIN_CLIENT_ID", value = var.keycloak_admin_client_id },
         { name = "REDIS_HOST", value = aws_elasticache_replication_group.redis.primary_endpoint_address },
         { name = "REDIS_PORT", value = "6379" },
         { name = "AWS_S3_BUCKET_NAME", value = var.s3_document_bucket_name },
         { name = "AWS_S3_REGION", value = var.aws_region },
-        { name = "CORS_ORIGINS", value = var.cors_origins },
-        { name = "ALLOWED_ORIGINS", value = var.cors_origins }
+        { name = "CORS_ORIGINS", value = local.effective_cors_origins },
+        { name = "ALLOWED_ORIGINS", value = local.effective_cors_origins }
       ]
       secrets = [
         {
@@ -747,8 +768,8 @@ resource "aws_ecs_task_definition" "keycloak" {
 
   container_definitions = jsonencode([
     {
-      name  = "keycloak"
-      image = "quay.io/keycloak/keycloak:24.0.0"
+      name       = "keycloak"
+      image      = "quay.io/keycloak/keycloak:24.0.0"
       entryPoint = ["/bin/sh", "-c"]
       command = [
         "/opt/keycloak/bin/kc.sh start-dev & KC_PID=$!; echo 'Waiting for Keycloak to start...'; until /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user \"$KEYCLOAK_ADMIN\" --password \"$KEYCLOAK_ADMIN_PASSWORD\"; do sleep 2; done; echo 'Configuring master realm sslRequired=NONE...'; /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE || true; echo 'Assigning admin role to user admin...'; /opt/keycloak/bin/kcadm.sh add-roles -r master --uusername \"$KEYCLOAK_ADMIN\" --rolename admin || true; echo 'Configuring Gateway admin client in master realm...'; if ! /opt/keycloak/bin/kcadm.sh get clients -r master -q clientId=gini-gateway-service | grep -q 'gini-gateway-service'; then /opt/keycloak/bin/kcadm.sh create clients -r master -s clientId=gini-gateway-service -s 'name=Gini AI Gateway Service' -s enabled=true -s clientAuthenticatorType=client-secret -s secret=\"$KEYCLOAK_ADMIN_CLIENT_SECRET\" -s serviceAccountsEnabled=true -s publicClient=false -s standardFlowEnabled=false -s directAccessGrantsEnabled=false; /opt/keycloak/bin/kcadm.sh add-roles -r master --uusername service-account-gini-gateway-service --rolename admin || true; fi; echo 'Keycloak initialization complete.'; wait $KC_PID"

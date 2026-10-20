@@ -44,7 +44,9 @@ resource "aws_iam_role" "github_deploy" {
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
               "repo:${var.github_repo}:*",
-              "repo:${local.github_repo_owner}*/${local.github_repo_name}*:*"
+              "repo:${local.github_repo_owner}*/${local.github_repo_name}*:*",
+              "repo:${local.github_repo_owner}/Gini-Ai-Enterprise-Monorepo:*",
+              "repo:${local.github_repo_owner}*/Gini-Ai-Enterprise-Monorepo*:*"
             ]
           }
         }
@@ -115,6 +117,29 @@ resource "aws_iam_policy" "github_deploy" {
           "rds:DescribeDBInstances",
           "rds:StopDBInstance",
           "rds:StartDBInstance"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "FrontendS3Deployment"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.project_name}-frontend-${var.environment}-*",
+          "arn:aws:s3:::${var.project_name}-frontend-${var.environment}-*/*"
+        ]
+      },
+      {
+        Sid    = "CloudFrontCacheInvalidation"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation"
         ]
         Resource = "*"
       }

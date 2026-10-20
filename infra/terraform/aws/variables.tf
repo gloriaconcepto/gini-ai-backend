@@ -85,7 +85,7 @@ variable "s3_document_bucket_name" {
 variable "enable_scale_to_zero" {
   description = "Whether to configure ECS services to scale to zero during idle/off-hours."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "cors_origins" {
@@ -103,7 +103,7 @@ variable "frontend_price_class" {
 variable "enable_frontend" {
   description = "Whether to provision CloudFront CDN distributions and S3 hosting for the frontend SPAs."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "github_repo" {
@@ -111,5 +111,3 @@ variable "github_repo" {
   type        = string
   default     = "gloriaconcepto/gini-ai-backend"
 }
-
-
