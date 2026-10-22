@@ -439,11 +439,12 @@ resource "aws_secretsmanager_secret_version" "kc_admin_password" {
 # 8. APPLICATION LOAD BALANCER & ECS CLUSTER
 # -----------------------------------------------------------------------------
 resource "aws_lb" "alb" {
-  name               = "alb-${var.project_name}-${var.environment}"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = aws_subnet.public[*].id
+  name                       = "alb-${var.project_name}-${var.environment}"
+  internal                   = false
+  load_balancer_type         = "application"
+  security_groups            = [aws_security_group.alb.id]
+  subnets                    = aws_subnet.public[*].id
+  xff_header_processing_mode = "preserve"
 
   tags = {
     Name = "alb-${var.project_name}-${var.environment}"

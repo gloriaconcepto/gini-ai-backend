@@ -136,15 +136,13 @@ export class KeycloakService {
         clientId || attributes?.clientId || KEYCLOAK_CONFIG.DEFAULT_CLIENT_ID;
 
       // 1. Create the new tenant realm (persist clientId into attributes for dynamic resolution)
-      const isHttp = this.configService
-        .get<string>('KEYCLOAK_URL', '')
-        .startsWith('http://');
+      const keycloakUrl = this.configService.get<string>('KEYCLOAK_URL', '');
 
       await this.kcAdminClient.realms.create({
         realm: realmName,
         displayName: tenantName,
         enabled: true,
-        sslRequired: isHttp ? 'NONE' : 'EXTERNAL',
+        sslRequired: 'NONE',
         loginTheme: KEYCLOAK_CONFIG.DEFAULT_THEME,
         accountTheme: KEYCLOAK_CONFIG.DEFAULT_THEME,
         adminTheme: KEYCLOAK_CONFIG.DEFAULT_THEME,
@@ -152,6 +150,7 @@ export class KeycloakService {
         attributes: {
           ...(attributes || {}),
           clientId: targetClientId,
+          ...(keycloakUrl ? { frontendUrl: keycloakUrl } : {}),
         },
       });
 

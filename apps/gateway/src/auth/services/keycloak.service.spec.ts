@@ -285,6 +285,7 @@ describe('KeycloakService', () => {
         attributes: {
           ...attributes,
           clientId: 'custom-frontend-client',
+          frontendUrl: 'http://localhost:8080',
         },
       });
 
@@ -456,9 +457,10 @@ describe('KeycloakService', () => {
       expect(mockRealmsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           realm: getTenantRealmName(tenantId),
-          attributes: {
+          attributes: expect.objectContaining({
             clientId: 'gini-frontend',
-          },
+            frontendUrl: 'http://localhost:8080',
+          }),
         }),
       );
       expect(mockClientsCreate).toHaveBeenCalledWith(
