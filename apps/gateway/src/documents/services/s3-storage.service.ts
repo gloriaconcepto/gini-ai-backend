@@ -34,6 +34,8 @@ export class S3StorageService implements IStorageService {
 
     this.s3Client = new S3Client({
       region: this.region,
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
   }
 
