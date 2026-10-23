@@ -1,0 +1,64 @@
+name: Azure Dev Environment Cost & Power Control
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Power action to perform'
+        required: true
+        default: 'status'
+        type: choice
+        options:
+          - status
+          - stop
+          - start
+      environment:
+        description: 'Target environment (e.g., dev)'
+        required: true
+        default: 'dev'
+  schedule:
+    # Auto-stop every weekday evening at 20:00 UTC (8:00 PM UTC)
+    - cron: '0 20 * * 1-5'
+    # Optional auto-start every weekday morning at 07:00 UTC (7:00 AM UTC)
+    - cron: '0 7 * * 1-5'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+jobs:
+  power-management:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Make Script Executable
+        run: chmod +x ./scripts/azure-power.sh
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Determine Action
+        id: determine_action
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            HOUR=$(date -u +%H)
+            if [ "$HOUR" -ge 18 ]; then
+              echo "action=stop" >> $GITHUB_OUTPUT
+            else
+              echo "action=start" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Execute Power Command
+        run: |
+          ACTION="${{ steps.determine_action.outputs.action }}"
+          ENV="${{ github.event.inputs.environment || 'dev' }}"
+          echo "Executing action: ${ACTION} for environment: ${ENV}"
+          ./scripts/azure-power.sh "${ACTION}" -e "${ENV}" -y

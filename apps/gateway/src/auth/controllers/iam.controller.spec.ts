@@ -35,6 +35,22 @@ describe('IamController', () => {
     createIdentityProvider: jest.fn(),
     updateIdentityProvider: jest.fn(),
     deleteIdentityProvider: jest.fn(),
+    listGroups: jest.fn(),
+    getGroupById: jest.fn(),
+    createGroup: jest.fn(),
+    createSubGroup: jest.fn(),
+    updateGroup: jest.fn(),
+    deleteGroup: jest.fn(),
+    assignRoleToGroup: jest.fn(),
+    removeRoleFromGroup: jest.fn(),
+    listGroupMembers: jest.fn(),
+    getUserGroups: jest.fn(),
+    addUserToGroup: jest.fn(),
+    removeUserFromGroup: jest.fn(),
+    listIdpMappers: jest.fn(),
+    createIdpMapper: jest.fn(),
+    deleteIdpMapper: jest.fn(),
+    syncIdpHierarchy: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -116,6 +132,89 @@ describe('IamController', () => {
       const roles = reflector.get(ROLES_KEY, controller.createIdp);
       expect(dualControl).toBe('CREATE_IDP');
       expect(roles).toEqual(['maker']);
+    });
+
+    it('should require dual-control and maker role on group operations', () => {
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.createGroup),
+      ).toBe('CREATE_GROUP');
+      expect(reflector.get(ROLES_KEY, controller.createGroup)).toEqual([
+        'maker',
+      ]);
+
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.createSubGroup),
+      ).toBe('CREATE_SUBGROUP');
+      expect(reflector.get(ROLES_KEY, controller.createSubGroup)).toEqual([
+        'maker',
+      ]);
+
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.updateGroup),
+      ).toBe('UPDATE_GROUP');
+      expect(reflector.get(ROLES_KEY, controller.updateGroup)).toEqual([
+        'maker',
+      ]);
+
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.deleteGroup),
+      ).toBe('DELETE_GROUP');
+      expect(reflector.get(ROLES_KEY, controller.deleteGroup)).toEqual([
+        'maker',
+      ]);
+
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.assignRoleToGroup),
+      ).toBe('ASSIGN_GROUP_ROLE');
+      expect(reflector.get(ROLES_KEY, controller.assignRoleToGroup)).toEqual([
+        'maker',
+      ]);
+
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.removeRoleFromGroup),
+      ).toBe('REMOVE_GROUP_ROLE');
+      expect(reflector.get(ROLES_KEY, controller.removeRoleFromGroup)).toEqual([
+        'maker',
+      ]);
+    });
+
+    it('should require dual-control and maker role on user group operations', () => {
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.addUserToGroup),
+      ).toBe('ADD_USER_TO_GROUP');
+      expect(reflector.get(ROLES_KEY, controller.addUserToGroup)).toEqual([
+        'maker',
+      ]);
+
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.removeUserFromGroup),
+      ).toBe('REMOVE_USER_FROM_GROUP');
+      expect(reflector.get(ROLES_KEY, controller.removeUserFromGroup)).toEqual([
+        'maker',
+      ]);
+    });
+
+    it('should require dual-control and maker role on IdP mapper and sync operations', () => {
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.createIdpMapper),
+      ).toBe('CREATE_IDP_MAPPER');
+      expect(reflector.get(ROLES_KEY, controller.createIdpMapper)).toEqual([
+        'maker',
+      ]);
+
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.deleteIdpMapper),
+      ).toBe('DELETE_IDP_MAPPER');
+      expect(reflector.get(ROLES_KEY, controller.deleteIdpMapper)).toEqual([
+        'maker',
+      ]);
+
+      expect(
+        reflector.get(REQUIRE_DUAL_CONTROL_KEY, controller.syncIdpHierarchy),
+      ).toBe('SYNC_IDP_HIERARCHY');
+      expect(reflector.get(ROLES_KEY, controller.syncIdpHierarchy)).toEqual([
+        'maker',
+      ]);
     });
   });
 
@@ -221,6 +320,181 @@ describe('IamController', () => {
         },
       );
       expect(result).toEqual({ name: 'editor' });
+    });
+
+    it('should delegate getGroups and getGroup to keycloakService', async () => {
+      mockKeycloakService.listGroups.mockResolvedValueOnce([{ id: 'g1' }]);
+      mockKeycloakService.getGroupById.mockResolvedValueOnce({ id: 'g1' });
+
+      const groups = await controller.getGroups(mockReq);
+      expect(mockKeycloakService.listGroups).toHaveBeenCalledWith('tenant-999');
+      expect(groups).toEqual([{ id: 'g1' }]);
+
+      const group = await controller.getGroup(mockReq, 'g1');
+      expect(mockKeycloakService.getGroupById).toHaveBeenCalledWith(
+        'tenant-999',
+        'g1',
+      );
+      expect(group).toEqual({ id: 'g1' });
+    });
+
+    it('should delegate createGroup and createSubGroup to keycloakService', async () => {
+      mockKeycloakService.createGroup.mockResolvedValueOnce({ id: 'g1' });
+      mockKeycloakService.createSubGroup.mockResolvedValueOnce({ id: 'g2' });
+
+      const g1 = await controller.createGroup(mockReq, { name: 'Eng' });
+      expect(mockKeycloakService.createGroup).toHaveBeenCalledWith(
+        'tenant-999',
+        { name: 'Eng' },
+      );
+      expect(g1).toEqual({ id: 'g1' });
+
+      const g2 = await controller.createSubGroup(mockReq, 'g1', {
+        name: 'DevOps',
+      });
+      expect(mockKeycloakService.createSubGroup).toHaveBeenCalledWith(
+        'tenant-999',
+        'g1',
+        { name: 'DevOps' },
+      );
+      expect(g2).toEqual({ id: 'g2' });
+    });
+
+    it('should delegate updateGroup and deleteGroup to keycloakService', async () => {
+      mockKeycloakService.updateGroup.mockResolvedValueOnce({ success: true });
+      mockKeycloakService.deleteGroup.mockResolvedValueOnce({ success: true });
+
+      await controller.updateGroup(mockReq, 'g1', { name: 'Engineering' });
+      expect(mockKeycloakService.updateGroup).toHaveBeenCalledWith(
+        'tenant-999',
+        'g1',
+        { name: 'Engineering' },
+      );
+
+      await controller.deleteGroup(mockReq, 'g1');
+      expect(mockKeycloakService.deleteGroup).toHaveBeenCalledWith(
+        'tenant-999',
+        'g1',
+      );
+    });
+
+    it('should delegate assignRoleToGroup, removeRoleFromGroup, and listGroupMembers to keycloakService', async () => {
+      mockKeycloakService.assignRoleToGroup.mockResolvedValueOnce({
+        success: true,
+      });
+      mockKeycloakService.removeRoleFromGroup.mockResolvedValueOnce({
+        success: true,
+      });
+      mockKeycloakService.listGroupMembers.mockResolvedValueOnce([
+        { id: 'u1' },
+      ]);
+
+      await controller.assignRoleToGroup(mockReq, 'g1', { roleName: 'maker' });
+      expect(mockKeycloakService.assignRoleToGroup).toHaveBeenCalledWith(
+        'tenant-999',
+        'g1',
+        'maker',
+      );
+
+      await controller.removeRoleFromGroup(mockReq, 'g1', 'maker');
+      expect(mockKeycloakService.removeRoleFromGroup).toHaveBeenCalledWith(
+        'tenant-999',
+        'g1',
+        'maker',
+      );
+
+      const members = await controller.listGroupMembers(mockReq, 'g1');
+      expect(mockKeycloakService.listGroupMembers).toHaveBeenCalledWith(
+        'tenant-999',
+        'g1',
+      );
+      expect(members).toEqual([{ id: 'u1' }]);
+    });
+
+    it('should delegate user group membership actions to keycloakService', async () => {
+      mockKeycloakService.getUserGroups.mockResolvedValueOnce([{ id: 'g1' }]);
+      mockKeycloakService.addUserToGroup.mockResolvedValueOnce({
+        success: true,
+      });
+      mockKeycloakService.removeUserFromGroup.mockResolvedValueOnce({
+        success: true,
+      });
+
+      const userGroups = await controller.getUserGroups(mockReq, 'u1');
+      expect(mockKeycloakService.getUserGroups).toHaveBeenCalledWith(
+        'tenant-999',
+        'u1',
+      );
+      expect(userGroups).toEqual([{ id: 'g1' }]);
+
+      await controller.addUserToGroup(mockReq, 'u1', 'g1');
+      expect(mockKeycloakService.addUserToGroup).toHaveBeenCalledWith(
+        'tenant-999',
+        'u1',
+        'g1',
+      );
+
+      await controller.removeUserFromGroup(mockReq, 'u1', 'g1');
+      expect(mockKeycloakService.removeUserFromGroup).toHaveBeenCalledWith(
+        'tenant-999',
+        'u1',
+        'g1',
+      );
+    });
+
+    it('should delegate IdP mapper and sync actions to keycloakService', async () => {
+      mockKeycloakService.listIdpMappers.mockResolvedValueOnce([
+        { id: 'map1' },
+      ]);
+      mockKeycloakService.createIdpMapper.mockResolvedValueOnce({
+        id: 'map1',
+      });
+      mockKeycloakService.deleteIdpMapper.mockResolvedValueOnce({
+        success: true,
+      });
+      mockKeycloakService.syncIdpHierarchy.mockResolvedValueOnce({
+        rolesCreated: 1,
+      });
+
+      const mappers = await controller.listIdpMappers(mockReq, 'azure-ad');
+      expect(mockKeycloakService.listIdpMappers).toHaveBeenCalledWith(
+        'tenant-999',
+        'azure-ad',
+      );
+      expect(mappers).toEqual([{ id: 'map1' }]);
+
+      const mapper = await controller.createIdpMapper(mockReq, 'azure-ad', {
+        name: 'Roles',
+        identityProviderMapper: 'oidc-role-idp-mapper',
+        config: {},
+      });
+      expect(mockKeycloakService.createIdpMapper).toHaveBeenCalledWith(
+        'tenant-999',
+        'azure-ad',
+        {
+          name: 'Roles',
+          identityProviderMapper: 'oidc-role-idp-mapper',
+          config: {},
+        },
+      );
+      expect(mapper).toEqual({ id: 'map1' });
+
+      await controller.deleteIdpMapper(mockReq, 'azure-ad', 'map1');
+      expect(mockKeycloakService.deleteIdpMapper).toHaveBeenCalledWith(
+        'tenant-999',
+        'azure-ad',
+        'map1',
+      );
+
+      const syncRes = await controller.syncIdpHierarchy(mockReq, 'azure-ad', {
+        roles: [{ name: 'lead' }],
+      });
+      expect(mockKeycloakService.syncIdpHierarchy).toHaveBeenCalledWith(
+        'tenant-999',
+        'azure-ad',
+        { roles: [{ name: 'lead' }] },
+      );
+      expect(syncRes).toEqual({ rolesCreated: 1 });
     });
   });
 });

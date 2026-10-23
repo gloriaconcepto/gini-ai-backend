@@ -53,6 +53,22 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   REDIS_HOST?: string;
+
+  @IsString()
+  @IsOptional()
+  CORS_ORIGINS?: string;
+
+  @IsString()
+  @IsOptional()
+  ALLOWED_ORIGINS?: string;
+
+  @IsString()
+  @IsOptional()
+  OEM_BACKOFFICE_URL?: string;
+
+  @IsString()
+  @IsOptional()
+  ENTERPRISE_PORTAL_URL?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

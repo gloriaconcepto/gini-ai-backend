@@ -214,8 +214,18 @@ resource "azurerm_container_app" "keycloak" {
     }
   }
 
+  secret {
+    name  = "kc-db-password"
+    value = var.db_admin_password
+  }
+
+  secret {
+    name  = "keycloak-admin-password"
+    value = var.keycloak_admin_password
+  }
+
   template {
-    min_replicas = 1
+    min_replicas = var.enable_scale_to_zero ? 0 : 1
     max_replicas = 1
     container {
       name   = "keycloak"
@@ -237,16 +247,16 @@ resource "azurerm_container_app" "keycloak" {
         value = var.db_admin_username
       }
       env {
-        name  = "KC_DB_PASSWORD"
-        value = var.db_admin_password
+        name        = "KC_DB_PASSWORD"
+        secret_name = "kc-db-password"
       }
       env {
         name  = "KEYCLOAK_ADMIN"
-        value = "admin"
+        value = var.keycloak_admin_username
       }
       env {
-        name  = "KEYCLOAK_ADMIN_PASSWORD"
-        value = "admin"
+        name        = "KEYCLOAK_ADMIN_PASSWORD"
+        secret_name = "keycloak-admin-password"
       }
       env {
         name  = "KC_PROXY_HEADERS"
@@ -306,7 +316,7 @@ resource "azurerm_container_app" "gateway" {
   }
 
   template {
-    min_replicas = 1
+    min_replicas = var.enable_scale_to_zero ? 0 : 1
     max_replicas = 5
     container {
       name = "api-gateway"
@@ -335,6 +345,18 @@ resource "azurerm_container_app" "gateway" {
         name  = "KEYCLOAK_URL"
         value = "https://${azurerm_container_app.keycloak.ingress[0].fqdn}"
       }
+      env {
+        name  = "OEM_BACKOFFICE_URL"
+        value = "https://ca-oem-backoffice-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain}"
+      }
+      env {
+        name  = "ALLOWED_ORIGINS"
+        value = var.cors_origins != "" ? var.cors_origins : "https://ca-enterprise-portal-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain},https://ca-oem-backoffice-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain}"
+      }
+      env {
+        name  = "CORS_ORIGINS"
+        value = var.cors_origins != "" ? var.cors_origins : "https://ca-enterprise-portal-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain},https://ca-oem-backoffice-${var.environment}.${azurerm_container_app_environment.aca_env.default_domain}"
+      }
     }
   }
 
@@ -350,14 +372,14 @@ locals {
       target_port  = 80
       cpu          = 0.5
       memory       = "1.0Gi"
-      min_replicas = 1
+      min_replicas = var.enable_scale_to_zero ? 0 : 1
       max_replicas = 3
     }
     "oem-backoffice" = {
       target_port  = 80
       cpu          = 0.25
       memory       = "0.5Gi"
-      min_replicas = 1
+      min_replicas = var.enable_scale_to_zero ? 0 : 1
       max_replicas = 3
     }
   }

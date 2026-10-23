@@ -39,6 +39,7 @@ describe('ApiKeyGuard', () => {
     expect(mockRequest.user).toBeDefined();
     expect(mockRequest.user.tenantId).toBe('tenant-100');
     expect(mockRequest.user.username).toBe('Agent Integration');
+    expect(mockRequest.user.roles).toEqual(['service']);
   });
 
   it('should throw UnauthorizedException when header is missing', async () => {

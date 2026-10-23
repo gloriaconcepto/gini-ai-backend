@@ -113,12 +113,48 @@ export class TenantDomainService {
         const tenantName =
           matchedRealm.displayName || matchedRealm.realm || tenantId;
 
+        // 1. Check realm attributes for persisted clientId
+        const rawAttrClientId = matchedRealm.attributes?.clientId;
+        let resolvedClientId = Array.isArray(rawAttrClientId)
+          ? rawAttrClientId[0]
+          : rawAttrClientId;
+
+        // 2. Fallback: inspect actual clients in the Keycloak realm
+        if (!resolvedClientId) {
+          try {
+            const clients = await this.keycloakService.listClients(tenantId);
+            const internalClients = new Set([
+              'account',
+              'account-console',
+              'admin-cli',
+              'broker',
+              'realm-management',
+            ]);
+            const frontendClient = (clients || []).find(
+              (c) =>
+                c.publicClient &&
+                c.clientId &&
+                !internalClients.has(c.clientId),
+            );
+            if (frontendClient?.clientId) {
+              resolvedClientId = frontendClient.clientId;
+            }
+          } catch {
+            // Ignore client listing errors during domain fallback resolution
+          }
+        }
+
+        // 3. Fallback default
+        resolvedClientId =
+          resolvedClientId ||
+          this.configService.get<string>('DEFAULT_CLIENT_ID', 'gini-frontend');
+
         // Auto-cache discovered realm in table for fast subsequent lookups
         const record = this.registerDomain(
           tenantId,
           tenantName,
           domain,
-          'gini-frontend',
+          resolvedClientId,
           matchedRealm.loginTheme || 'gini-theme',
         );
 

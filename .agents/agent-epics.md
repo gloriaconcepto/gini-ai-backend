@@ -65,6 +65,50 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Implement public auto-resolution endpoint `GET /tenant/resolve` in `TenantController` (`@Public()`).
 - [x] Add comprehensive unit tests in `tenant-domain.service.spec.ts`, `tenant.controller.spec.ts`, and `system.controller.spec.ts`.
 
+## Epic 1.15: Comprehensive Audit Log Module & Auditor Role Enforcement
+- [x] Create domain types and storage interfaces (`AuditActionCategory`, `AuditStatus`, `AuditActor`, `AuditLogEntry`, `IAuditStorageAdapter`).
+- [x] Implement `AuditMaskingService` for recursive key-based and regex-based sanitization of credentials, secrets, tokens, credit cards, and PII.
+- [x] Implement `InMemoryAuditStorageAdapter` with bounded FIFO eviction, multi-tenant isolation, date filtering, pagination, and summary metrics calculation.
+- [x] Implement `AuditService` for fail-safe asynchronous log persistence, querying, metrics aggregation, and CSV/JSON export.
+- [x] Implement `@Audited()` and `@SkipAudit()` decorators and `AuditLogInterceptor` for automatic capture of mutating HTTP actions and route-specific metadata.
+- [x] Implement `AuditorGuard` enforcing strict read-only access (`GET`/`HEAD`) for users with the `auditor` role.
+- [x] Implement `AuditController` with OpenAPI-decorated endpoints (`GET /audit/logs`, `GET /audit/logs/:id`, `GET /audit/summary`, `GET /audit/export`).
+- [x] Wire `AuditModule` into `GatewayModule` as global interceptor (`APP_INTERCEPTOR`).
+- [x] Add exhaustive unit tests across services, interceptors, adapters, guards, and controllers with >=90% test coverage.
+
+## Epic 1.16: 3rd-Party IdP Role, Group & Corporate Hierarchy Synchronization
+- [x] Group & Hierarchy Management in `KeycloakService`:
+  - CRUD operations for Keycloak Groups and sub-groups to represent corporate hierarchy.
+  - Group realm role mappings and attribute metadata assignment.
+  - User-group membership operations (add, list, remove).
+- [x] Expose Tenant IAM Group Endpoints in `IamController`:
+  - `GET /iam/groups`: List group hierarchy tree.
+  - `GET /iam/groups/:groupId`: Retrieve specific group details with roles & attributes.
+  - `POST /iam/groups`: Create root group (guarded by `@RequireDualControl('CREATE_GROUP')`).
+  - `POST /iam/groups/:groupId/children`: Create subgroup under parent (guarded by `@RequireDualControl('CREATE_SUBGROUP')`).
+  - `PATCH /iam/groups/:groupId`: Update group metadata and attributes (guarded by `@RequireDualControl('UPDATE_GROUP')`).
+  - `DELETE /iam/groups/:groupId`: Delete group (guarded by `@RequireDualControl('DELETE_GROUP')`).
+  - `POST /iam/groups/:groupId/roles`: Map realm role to group (guarded by `@RequireDualControl('ASSIGN_GROUP_ROLE')`).
+  - `DELETE /iam/groups/:groupId/roles/:roleName`: Remove role from group (guarded by `@RequireDualControl('REMOVE_GROUP_ROLE')`).
+  - `GET /iam/groups/:groupId/members`: List members of a group.
+  - `GET /iam/users/:userId/groups`: List user's assigned groups.
+  - `POST /iam/users/:userId/groups/:groupId`: Add user to group (guarded by `@RequireDualControl('ADD_USER_TO_GROUP')`).
+  - `DELETE /iam/users/:userId/groups/:groupId`: Remove user from group (guarded by `@RequireDualControl('REMOVE_USER_FROM_GROUP')`).
+- [x] Identity Provider Mapper Infrastructure in `KeycloakService`:
+  - Endpoints and methods to configure Keycloak IdP Mappers (`kcAdminClient.identityProviders.*Mapper*`) on configured 3rd-party IdPs.
+  - Support mapping external role claims to internal realm roles (`oidc-role-idp-mapper`, `saml-role-idp-mapper`).
+  - Support mapping external group claims to Keycloak hierarchical groups (`oidc-group-idp-mapper`).
+  - Support mapping user corporate metadata (title, department, manager, employee ID) to Keycloak user attributes (`oidc-user-attribute-idp-mapper`).
+  - `GET /iam/idp/:alias/mappers`: List configured mappers for an IdP.
+  - `POST /iam/idp/:alias/mappers`: Register claim mapper (guarded by `@RequireDualControl('CREATE_IDP_MAPPER')`).
+  - `DELETE /iam/idp/:alias/mappers/:mapperId`: Delete claim mapper (guarded by `@RequireDualControl('DELETE_IDP_MAPPER')`).
+- [x] IdP Discovery & Catalog Hierarchy Sync Service (Option A Hybrid Engine):
+  - Support direct directory import payload (standard enterprise roles, group trees, and role bindings).
+  - Support native IdP directory query sync where provider directory credentials exist.
+  - `POST /iam/idp/:alias/sync`: Trigger full organizational sync (guarded by `@RequireDualControl('SYNC_IDP_HIERARCHY')`).
+- [x] Update `ChangeRequestExecutorService` to execute all new group, mapper, and sync actions upon checker approval.
+- [x] Comprehensive unit tests across services, controllers, executor, and governance interceptors.
+
 ## Epic 2: Maker-Checker Governance (Priority 1)
 - [x] Create in-memory `ChangeRequestStoreService` to store and manage pending actions (`PENDING`, `APPROVED`, `REJECTED`, `EXECUTED`).
 - [x] Create `@RequireDualControl(actionType)` decorator to mark state-changing routes in `IamController`.
@@ -78,6 +122,27 @@ This document serves as the single source of truth for agents to understand the 
   - `POST /iam/governance/requests/:id/reject`: Reject the pending request with review comments.
 - [x] Refactor `IamController` permissions: remove `@Roles('admin')` and replace with `@Roles('maker', 'checker')` (or role-specific permissions per endpoint).
 - [x] Add unit and e2e tests covering maker submission, checker approval execution, checker rejection, and self-approval prevention (`checkerId === makerId`).
+
+## Epic 2.1: Security Hardening, Credential Sanitization & Configuration Externalization (Priority 1 - Immediate)
+- [x] **Security Vulnerability Remediation (P0)**:
+  - [x] Remove hardcoded backdoor `user.username === 'admin'` from `MasterAdminGuard`; enforce strict cryptographic master realm roles (`admin`, `realm-admin`, `manage-realm`).
+  - [x] Fix privilege escalation in `ApiKeyGuard`: remove default `admin` role grant from API keys, defaulting strictly to `['service']`.
+  - [x] Remove hardcoded `KEYCLOAK_ADMIN="admin"` and `KEYCLOAK_ADMIN_PASSWORD="admin"` from Azure Container Apps Terraform resource in `infra/terraform/main.tf`; wire via sensitive Terraform variables / Azure Key Vault.
+  - [x] Restrict tenant SPA client redirect URIs and web origins in `KeycloakService.provisionTenantRealm` to avoid open wildcard redirects (`['*']`).
+  - [x] Constrain permissive CORS origin reflection (`origin: true`) in Gateway `main.ts` using environment-driven origin whitelisting.
+- [x] **Dynamic Tenant Client ID Persistence & Pre-Login Discovery (Priority 1)**:
+  - [x] Persist `clientId` in Keycloak realm attributes during tenant provisioning (`KeycloakService.provisionTenantRealm` and `SystemController.createTenant`).
+  - [x] Implement dynamic client resolution in `TenantDomainService.resolveDomain` (read `realm.attributes.clientId`, fallback to inspecting public SPA clients via `KeycloakService.listClients`, eliminating hardcoded `'gini-frontend'`).
+  - [x] Expose `clientId` in `TenantWorkspaceResponseDto` (`GET /tenant/workspace`) for consistent post-login workspace client details.
+  - [x] Update unit tests across `tenant-domain.service.spec.ts`, `keycloak.service.spec.ts`, and `tenant.controller.spec.ts`.
+- [ ] **Secret Sanitization & Environment Externalization (P1)**:
+  - [ ] Remove committed plaintext secrets from `infra/terraform/terraform.tfvars` and `.env.remote`.
+  - [ ] Externalize seed secrets in `infra/keycloak/master-realm.json`, `scripts/init-keycloak.sh`, and `scripts/bootstrap-keycloak.sh` to consume environment variables with secure fallback generation.
+  - [ ] Standardize environment variable casing: replace `process.env.port` with `process.env.PORT` across `apps/gateway/src/main.ts` and `apps/workers/src/main.ts`.
+  - [ ] Disambiguate default worker service port (assign distinct default `PORT=3001` for workers to prevent port collision with gateway on `3000`).
+- [ ] **Codebase Magic Numbers & Constants Cleanup (P2)**:
+  - [ ] Refactor magic numbers (`65536` max header size, `jwksRequestsPerMinute: 10`, `export limit: 5000`, API key entropy/prefix lengths) into centralized constants or configuration values.
+  - [ ] Centralize hardcoded realm conventions (`tenant-` prefix, `/realms/master`, `gini-frontend`, `gini-theme`) into unified configuration tokens.
 
 ## Epic 3: Database & Tenant Isolation (Priority 2)
 - [ ] Configure Drizzle ORM to connect to the local `pgvector` instance.

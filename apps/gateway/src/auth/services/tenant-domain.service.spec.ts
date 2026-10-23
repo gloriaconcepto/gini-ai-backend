@@ -10,6 +10,7 @@ describe('TenantDomainService', () => {
   let service: TenantDomainService;
   let mockKeycloakService: {
     listAllTenants: jest.Mock;
+    listClients: jest.Mock;
   };
   let mockConfigService: {
     get: jest.Mock;
@@ -18,6 +19,7 @@ describe('TenantDomainService', () => {
   beforeEach(async () => {
     mockKeycloakService = {
       listAllTenants: jest.fn(),
+      listClients: jest.fn(),
     };
     mockConfigService = {
       get: jest
@@ -119,6 +121,60 @@ describe('TenantDomainService', () => {
       const cached = await service.resolveDomain('fallback.org');
       expect(cached.tenantId).toBe(tenantId);
       expect(mockKeycloakService.listAllTenants).toHaveBeenCalledTimes(1);
+    });
+
+    it('should resolve custom clientId from Keycloak realm attributes during fallback', async () => {
+      const tenantId = 'custom-client-tenant';
+      mockKeycloakService.listAllTenants.mockResolvedValueOnce([
+        {
+          id: 'realm-id-custom',
+          realm: `tenant-${tenantId}`,
+          displayName: 'Custom Client Tenant',
+          loginTheme: 'custom-theme',
+          attributes: {
+            domainName: 'custom-app.io',
+            clientId: 'custom-portal-spa',
+          },
+        },
+      ]);
+
+      const resolved = await service.resolveDomain('custom-app.io');
+      expect(resolved.clientId).toBe('custom-portal-spa');
+      expect(resolved.loginTheme).toBe('custom-theme');
+    });
+
+    it('should fallback to inspecting Keycloak realm clients if attributes.clientId is missing', async () => {
+      const tenantId = 'inspected-tenant';
+      mockKeycloakService.listAllTenants.mockResolvedValueOnce([
+        {
+          id: 'realm-id-inspect',
+          realm: `tenant-${tenantId}`,
+          displayName: 'Inspected Tenant',
+          attributes: {
+            domainName: 'inspect.org',
+          },
+        },
+      ]);
+      mockKeycloakService.listClients.mockResolvedValueOnce([
+        { clientId: 'account', publicClient: true },
+        { clientId: 'admin-cli', publicClient: false },
+        { clientId: 'acme-web-client', publicClient: true },
+      ]);
+
+      const resolved = await service.resolveDomain('inspect.org');
+      expect(mockKeycloakService.listClients).toHaveBeenCalledWith(tenantId);
+      expect(resolved.clientId).toBe('acme-web-client');
+    });
+
+    it('should register domain with custom clientId and resolve it', async () => {
+      service.registerDomain(
+        'custom-id',
+        'Custom App',
+        'custom.dev',
+        'my-special-client',
+      );
+      const resolved = await service.resolveDomain('custom.dev');
+      expect(resolved.clientId).toBe('my-special-client');
     });
 
     it('should throw NotFoundException if domain does not exist in table or Keycloak', async () => {

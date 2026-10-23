@@ -39,3 +39,27 @@ variable "keycloak_admin_client_secret" {
   sensitive   = true
   description = "Keycloak confidential client secret for Gateway administrative access."
 }
+
+variable "keycloak_admin_username" {
+  type        = string
+  default     = "admin"
+  description = "Keycloak initial master administrator username."
+}
+
+variable "keycloak_admin_password" {
+  type        = string
+  sensitive   = true
+  description = "Keycloak initial master administrator password."
+}
+
+variable "enable_scale_to_zero" {
+  type        = bool
+  default     = true
+  description = "Whether to allow container apps to scale down to 0 replicas when idle (cost-saving for dev/staging)."
+}
+
+variable "cors_origins" {
+  type        = string
+  default     = ""
+  description = "Comma-separated list of allowed CORS origins for API Gateway. If empty, automatically populated from frontend container apps."
+}

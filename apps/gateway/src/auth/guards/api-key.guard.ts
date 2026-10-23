@@ -38,7 +38,7 @@ export class ApiKeyGuard implements CanActivate {
       userId: `apikey-${result.record.id}`,
       username: result.record.name,
       tenantId: result.record.tenantId,
-      roles: ['service', 'admin'],
+      roles: ['service'],
       issuer: 'local-api-key',
     };
 
