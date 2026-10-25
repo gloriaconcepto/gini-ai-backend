@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -89,6 +90,38 @@ export class EnvironmentVariables {
   @IsNumber()
   @IsOptional()
   OPENSEARCH_VECTOR_DIMENSION?: number;
+
+  @IsString()
+  @IsOptional()
+  APP_ENV?: string;
+
+  @IsString()
+  @IsOptional()
+  DOCUMENT_STORAGE_MODE?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_ACCESS_KEY_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_SECRET_ACCESS_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_SESSION_TOKEN?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_PROFILE?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_S3_ENDPOINT?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  AWS_S3_FORCE_PATH_STYLE?: boolean;
 
   @IsString()
   @IsOptional()

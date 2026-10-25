@@ -48,6 +48,31 @@ describe('Config Validation', () => {
     expect(validated.ENTERPRISE_PORTAL_URL).toBe('https://app.gini.ai');
   });
 
+  it('should validate DOCUMENT_STORAGE_MODE and AWS credential configs correctly', () => {
+    const rawConfig = {
+      APP_ENV: 'local',
+      DOCUMENT_STORAGE_MODE: 'remote',
+      AWS_ACCESS_KEY_ID: 'AKIAEXAMPLE123',
+      AWS_SECRET_ACCESS_KEY: 'secret123',
+      AWS_SESSION_TOKEN: 'token123',
+      AWS_PROFILE: 'gini',
+      AWS_S3_ENDPOINT: 'https://s3.custom.com',
+      AWS_S3_FORCE_PATH_STYLE: 'true',
+      AWS_S3_BUCKET_NAME: 'gini-rag-documents-587546840220',
+    };
+
+    const validated = validate(rawConfig);
+    expect(validated.APP_ENV).toBe('local');
+    expect(validated.DOCUMENT_STORAGE_MODE).toBe('remote');
+    expect(validated.AWS_ACCESS_KEY_ID).toBe('AKIAEXAMPLE123');
+    expect(validated.AWS_SECRET_ACCESS_KEY).toBe('secret123');
+    expect(validated.AWS_SESSION_TOKEN).toBe('token123');
+    expect(validated.AWS_PROFILE).toBe('gini');
+    expect(validated.AWS_S3_ENDPOINT).toBe('https://s3.custom.com');
+    expect(validated.AWS_S3_FORCE_PATH_STYLE).toBe(true);
+    expect(validated.AWS_S3_BUCKET_NAME).toBe('gini-rag-documents-587546840220');
+  });
+
   it('should export validateConfig as an alias of validate', () => {
     expect(validateConfig).toBe(validate);
   });
