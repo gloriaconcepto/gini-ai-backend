@@ -77,22 +77,6 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  SAGEMAKER_LLM_ENDPOINT_NAME?: string;
-
-  @IsString()
-  @IsOptional()
-  SAGEMAKER_EMBEDDING_ENDPOINT_NAME?: string;
-
-  @IsString()
-  @IsOptional()
-  OPENSEARCH_NODE_URL?: string;
-
-  @IsNumber()
-  @IsOptional()
-  OPENSEARCH_VECTOR_DIMENSION?: number;
-
-  @IsString()
-  @IsOptional()
   APP_ENV?: string;
 
   @IsString()

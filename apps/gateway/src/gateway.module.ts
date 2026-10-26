@@ -8,7 +8,6 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { validateConfig } from './config.validation';
 import { AuditModule } from './audit/audit.module';
 import { AuditLogInterceptor } from './audit/interceptors/audit-log.interceptor';
-import { AiModule } from './ai/ai.module';
 import { DocumentsModule } from './documents/documents.module';
 
 @Module({
@@ -21,7 +20,6 @@ import { DocumentsModule } from './documents/documents.module';
     }),
     AuthModule,
     AuditModule,
-    AiModule,
     DocumentsModule,
   ],
   controllers: [GatewayController],

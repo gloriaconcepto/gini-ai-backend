@@ -2,7 +2,7 @@
 
 ## Technology Stack & Deployment
 - **Framework:** NestJS + TypeScript (Azure Container Apps for Dev/Prod, Docker Compose for Local).
-- **Database:** PostgreSQL 16 + `pgvector` (Azure Flexible Server in Prod, `ankane/pgvector` locally).
+- **Database:** PostgreSQL 16 (Azure Flexible Server in Prod, `postgres:16-alpine` locally).
 - **Cache & Message Broker:** Redis 7 (Azure Container Apps in Prod, Docker Compose locally).
 - **Identity:** Keycloak 24 (Deployed natively on Azure Container Apps and Docker Compose).
 - **AI Hardware:** GPU provisioning is explicitly disabled for now. The `snet-vllm-gpu` subnet is retained in Terraform for future integration.

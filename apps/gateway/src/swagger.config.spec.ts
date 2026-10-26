@@ -71,9 +71,9 @@ describe('SwaggerConfig & OpenAPI Generator', () => {
     expect(paths).toContain('/audit/summary');
     expect(paths).toContain('/audit/export');
 
-    // AI endpoints
-    expect(paths).toContain('/ai/generate');
-    expect(paths).toContain('/ai/rag/query');
+    // Document endpoints
+    expect(paths).toContain('/documents');
+    expect(paths).toContain('/documents/upload-url');
   });
 
   it('should export openapi specification and pass the checkOnly verification', async () => {

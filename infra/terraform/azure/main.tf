@@ -117,7 +117,7 @@ resource "azurerm_postgresql_flexible_server" "postgres" {
 resource "azurerm_postgresql_flexible_server_configuration" "pg_extensions" {
   name      = "azure.extensions"
   server_id = azurerm_postgresql_flexible_server.postgres.id
-  value     = "VECTOR,UUID-OSSP,PG_TRGM"
+  value     = "UUID-OSSP,PG_TRGM"
 }
 
 resource "azurerm_postgresql_flexible_server_database" "app_db" {
