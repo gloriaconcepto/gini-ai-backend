@@ -32,8 +32,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1150.0",
-    "@aws-sdk/client-sagemaker": "^3.1136.0",
-    "@aws-sdk/client-sagemaker-runtime": "^3.1136.0",
     "@aws-sdk/credential-provider-node": "^3.972.83",
     "@aws-sdk/s3-request-presigner": "^3.1150.0",
     "@keycloak/keycloak-admin-client": "^26.7.2",
@@ -43,7 +41,6 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.7",
-    "@opensearch-project/opensearch": "^3.6.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "jsonwebtoken": "^9.0.3",

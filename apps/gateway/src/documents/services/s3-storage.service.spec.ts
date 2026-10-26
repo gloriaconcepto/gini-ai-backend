@@ -3,11 +3,15 @@ import { S3StorageService } from './s3-storage.service';
 import { IngestionMetadataV1 } from '../documents.types';
 
 const mockSend = jest.fn();
+const mockS3ClientConstructor = jest.fn();
 jest.mock('@aws-sdk/client-s3', () => {
   return {
-    S3Client: jest.fn().mockImplementation(() => ({
-      send: mockSend,
-    })),
+    S3Client: jest.fn().mockImplementation((config) => {
+      mockS3ClientConstructor(config);
+      return {
+        send: mockSend,
+      };
+    }),
     PutObjectCommand: jest.fn().mockImplementation((args) => ({ ...args, type: 'PutObject' })),
     GetObjectCommand: jest.fn().mockImplementation((args) => ({ ...args, type: 'GetObject' })),
     HeadObjectCommand: jest.fn().mockImplementation((args) => ({ ...args, type: 'HeadObject' })),
@@ -119,11 +123,42 @@ describe('S3StorageService', () => {
   it('should upload direct buffer to S3', async () => {
     mockSend.mockResolvedValueOnce({ ETag: '"direct-etag"' });
     const res = await service.uploadDirect(
-      'tenant-001/direct.pdf',
-      Buffer.from('test-content'),
-      'application/pdf',
-    );
+       'tenant-001/direct.pdf',
+       Buffer.from('test-content'),
+       'application/pdf',
+     );
     expect(res.size).toBe(12);
     expect(res.etag).toBe('"direct-etag"');
+  });
+
+  it('should initialize S3Client with explicit credentials, endpoint, and forcePathStyle when configured', () => {
+    const credConfigService = {
+      get: jest.fn((key: string) => {
+        if (key === 'AWS_S3_BUCKET_NAME') return 'custom-bucket';
+        if (key === 'AWS_S3_REGION') return 'eu-west-1';
+        if (key === 'AWS_S3_PRESIGNED_EXPIRATION_SECONDS') return 600;
+        if (key === 'AWS_ACCESS_KEY_ID') return 'MY_KEY_ID';
+        if (key === 'AWS_SECRET_ACCESS_KEY') return 'MY_SECRET';
+        if (key === 'AWS_SESSION_TOKEN') return 'MY_TOKEN';
+        if (key === 'AWS_S3_ENDPOINT') return 'https://s3.custom.endpoint';
+        if (key === 'AWS_S3_FORCE_PATH_STYLE') return true;
+        return undefined;
+      }),
+    } as unknown as ConfigService;
+
+    new S3StorageService(credConfigService);
+
+    expect(mockS3ClientConstructor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        region: 'eu-west-1',
+        credentials: {
+          accessKeyId: 'MY_KEY_ID',
+          secretAccessKey: 'MY_SECRET',
+          sessionToken: 'MY_TOKEN',
+        },
+        endpoint: 'https://s3.custom.endpoint',
+        forcePathStyle: true,
+      }),
+    );
   });
 });

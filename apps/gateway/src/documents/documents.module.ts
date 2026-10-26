@@ -26,7 +26,14 @@ import { STORAGE_SERVICE_TOKEN } from './interfaces/storage-service.interface';
         s3: S3StorageService,
         mock: MockStorageService,
       ) => {
+        const storageMode = config
+          .get<string>('DOCUMENT_STORAGE_MODE')
+          ?.toLowerCase();
+        if (storageMode === 'local' || storageMode === 'mock') {
+          return mock;
+        }
         const useAws =
+          storageMode === 'remote' ||
           config.get<string>('NODE_ENV') === 'production' ||
           config.get<string>('APP_ENV') === 'remote';
         return useAws ? s3 : mock;

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   S3Client,
+  S3ClientConfig,
   PutObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
@@ -32,11 +33,35 @@ export class S3StorageService implements IStorageService {
       this.config.get<number>('AWS_S3_PRESIGNED_EXPIRATION_SECONDS') || 900,
     );
 
-    this.s3Client = new S3Client({
+    const clientConfig: S3ClientConfig = {
       region: this.region,
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
-    });
+    };
+
+    const accessKeyId = this.config.get<string>('AWS_ACCESS_KEY_ID');
+    const secretAccessKey = this.config.get<string>('AWS_SECRET_ACCESS_KEY');
+    const sessionToken = this.config.get<string>('AWS_SESSION_TOKEN');
+
+    if (accessKeyId && secretAccessKey) {
+      clientConfig.credentials = {
+        accessKeyId,
+        secretAccessKey,
+        ...(sessionToken ? { sessionToken } : {}),
+      };
+    }
+
+    const endpoint = this.config.get<string>('AWS_S3_ENDPOINT');
+    if (endpoint) {
+      clientConfig.endpoint = endpoint;
+    }
+
+    const forcePathStyle = this.config.get<boolean>('AWS_S3_FORCE_PATH_STYLE');
+    if (forcePathStyle !== undefined) {
+      clientConfig.forcePathStyle = forcePathStyle;
+    }
+
+    this.s3Client = new S3Client(clientConfig);
   }
 
   async getUploadPresignedUrl(

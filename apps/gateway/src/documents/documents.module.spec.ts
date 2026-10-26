@@ -48,4 +48,45 @@ describe('DocumentsModule', () => {
     const storage = moduleRef.get<IStorageService>(STORAGE_SERVICE_TOKEN);
     expect(storage).toBeInstanceOf(S3StorageService);
   });
+
+  it('should provide S3StorageService in local environment when DOCUMENT_STORAGE_MODE is remote', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          load: [
+            () => ({
+              NODE_ENV: 'development',
+              APP_ENV: 'local',
+              DOCUMENT_STORAGE_MODE: 'remote',
+            }),
+          ],
+        }),
+        DocumentsModule,
+      ],
+    }).compile();
+
+    const storage = moduleRef.get<IStorageService>(STORAGE_SERVICE_TOKEN);
+    expect(storage).toBeInstanceOf(S3StorageService);
+  });
+
+  it('should provide MockStorageService when DOCUMENT_STORAGE_MODE is local even if NODE_ENV is production', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          load: [
+            () => ({
+              NODE_ENV: 'production',
+              DOCUMENT_STORAGE_MODE: 'local',
+            }),
+          ],
+        }),
+        DocumentsModule,
+      ],
+    }).compile();
+
+    const storage = moduleRef.get<IStorageService>(STORAGE_SERVICE_TOKEN);
+    expect(storage).toBeInstanceOf(MockStorageService);
+  });
 });

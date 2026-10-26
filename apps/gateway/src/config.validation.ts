@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -76,19 +77,35 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  SAGEMAKER_LLM_ENDPOINT_NAME?: string;
+  APP_ENV?: string;
 
   @IsString()
   @IsOptional()
-  SAGEMAKER_EMBEDDING_ENDPOINT_NAME?: string;
+  DOCUMENT_STORAGE_MODE?: string;
 
   @IsString()
   @IsOptional()
-  OPENSEARCH_NODE_URL?: string;
+  AWS_ACCESS_KEY_ID?: string;
 
-  @IsNumber()
+  @IsString()
   @IsOptional()
-  OPENSEARCH_VECTOR_DIMENSION?: number;
+  AWS_SECRET_ACCESS_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_SESSION_TOKEN?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_PROFILE?: string;
+
+  @IsString()
+  @IsOptional()
+  AWS_S3_ENDPOINT?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  AWS_S3_FORCE_PATH_STYLE?: boolean;
 
   @IsString()
   @IsOptional()

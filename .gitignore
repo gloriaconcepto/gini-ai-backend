@@ -42,6 +42,9 @@ lerna-debug.log*
 .env.production.local
 .env.local
 .env.remote
+.env.aws.example
+.env.remote.example
+.env.example
 
 # temp directory
 .temp
