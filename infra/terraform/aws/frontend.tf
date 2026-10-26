@@ -60,14 +60,15 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 
 # Initial placeholder index.html for each app prefix (overwritten by CI/CD build uploads)
 resource "aws_s3_object" "app_index_placeholder" {
-  for_each     = local.frontend_apps
-  bucket       = aws_s3_bucket.frontend[0].id
-  key          = "${each.key}/index.html"
-  content      = "<!DOCTYPE html><html><head><title>${each.key}</title></head><body><h1>${each.key} is provisioning...</h1></body></html>"
-  content_type = "text/html"
+  for_each      = local.frontend_apps
+  bucket        = aws_s3_bucket.frontend[0].id
+  key           = "${each.key}/index.html"
+  content       = "<!DOCTYPE html><html><head><title>${each.key}</title></head><body><h1>${each.key} is provisioning...</h1></body></html>"
+  content_type  = "text/html"
+  cache_control = "public, max-age=0, must-revalidate"
 
   lifecycle {
-    ignore_changes = [content, etag]
+    ignore_changes = [content, etag, cache_control, metadata, tags, tags_all]
   }
 }
 
