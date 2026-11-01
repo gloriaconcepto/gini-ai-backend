@@ -1353,6 +1353,15 @@ export class KeycloakService {
     await this.authenticate();
     const realmName = await this.resolveRealmName(tenantId);
     try {
+      if (updates.attributes) {
+        const existing = await this.kcAdminClient.realms.findOne({
+          realm: realmName,
+        });
+        updates.attributes = {
+          ...(existing?.attributes || {}),
+          ...updates.attributes,
+        };
+      }
       await this.kcAdminClient.realms.update({ realm: realmName }, updates);
       return { success: true };
     } catch (error) {
