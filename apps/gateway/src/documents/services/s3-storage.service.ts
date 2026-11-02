@@ -93,15 +93,30 @@ export class S3StorageService implements IStorageService {
 
   async getDownloadPresignedUrl(
     s3Key: string,
+    originalFileNameOrExpiry?: string | number,
     expiresInSeconds: number = 300,
   ): Promise<string> {
+    const filename =
+      typeof originalFileNameOrExpiry === 'string'
+        ? originalFileNameOrExpiry
+        : undefined;
+    const expiry =
+      typeof originalFileNameOrExpiry === 'number'
+        ? originalFileNameOrExpiry
+        : expiresInSeconds;
+
     const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: s3Key,
+      ...(filename
+        ? {
+            ResponseContentDisposition: `attachment; filename="${encodeURIComponent(filename)}"`,
+          }
+        : {}),
     });
 
     return getSignedUrl(this.s3Client, command, {
-      expiresIn: expiresInSeconds,
+      expiresIn: expiry,
     });
   }
 

@@ -33,7 +33,9 @@ export interface DocumentEntity {
   tenantId: string;
   fileName: string;
   stem: string;
+  storageStem?: string;
   extension: string;
+  version?: string;
   mimeType: string;
   fileSize: number;
   s3Key: string;
@@ -76,6 +78,11 @@ export interface IDocumentRepository {
   create(doc: DocumentEntity): Promise<DocumentEntity>;
   findById(tenantId: string, id: string): Promise<DocumentEntity | null>;
   findByStem(tenantId: string, stem: string): Promise<DocumentEntity | null>;
+  findLatestVersion(
+    tenantId: string,
+    baseStem: string,
+    extension: string,
+  ): Promise<DocumentEntity | null>;
   update(
     tenantId: string,
     id: string,

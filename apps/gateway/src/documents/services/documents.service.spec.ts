@@ -80,16 +80,78 @@ describe('DocumentsService', () => {
       expect(res.fileName).toBe('performance-policy.pdf');
       expect(res.stem).toBe('performance-policy');
       expect(res.uploadUrl).toBe('https://s3.test/upload');
-      expect(res.s3Key).toBe('tenant-001/performance-policy.pdf');
-      expect(res.metadataS3Key).toBe('tenant-001/performance-policy.metadata.json');
+      expect(res.s3Key).toBe('tenant-001/performance-policy_pdf_v1.0.pdf');
+      expect(res.metadataS3Key).toBe(
+        'tenant-001/performance-policy_pdf_v1.0.metadata.json',
+      );
       expect(res.status).toBe(DocumentUploadStatus.PENDING_UPLOAD);
 
       const saved = await repository.findById('tenant-001', res.documentId);
       expect(saved).toBeDefined();
       expect(saved?.metadata.schema_version).toBe('1.0');
-      expect(saved?.metadata.document.document_id).toBe('performance-policy');
+      expect(saved?.metadata.document.document_id).toBe(
+        'performance-policy_pdf_v1.0',
+      );
+      expect(saved?.metadata.document.version).toBe('1.0');
       expect(saved?.metadata.access.departments).toEqual(['technology']);
       expect(saved?.metadata.access.excluded_users).toEqual(['user-alex-rivera']);
+    });
+
+    it('should auto-increment semantic version on subsequent upload of same format', async () => {
+      const first = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'performance-policy.pdf',
+      });
+      expect(first.s3Key).toBe('tenant-001/performance-policy_pdf_v1.0.pdf');
+      expect(first.metadataS3Key).toBe(
+        'tenant-001/performance-policy_pdf_v1.0.metadata.json',
+      );
+
+      const second = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'performance-policy.pdf',
+      });
+      expect(second.s3Key).toBe('tenant-001/performance-policy_pdf_v1.1.pdf');
+      expect(second.metadataS3Key).toBe(
+        'tenant-001/performance-policy_pdf_v1.1.metadata.json',
+      );
+    });
+
+    it('should isolate metadata and document keys for same name with different format', async () => {
+      const docx = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'annual-report.docx',
+      });
+      const pdf = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'annual-report.pdf',
+      });
+
+      expect(docx.s3Key).toBe('tenant-001/annual-report_docx_v1.0.docx');
+      expect(docx.metadataS3Key).toBe(
+        'tenant-001/annual-report_docx_v1.0.metadata.json',
+      );
+
+      expect(pdf.s3Key).toBe('tenant-001/annual-report_pdf_v1.0.pdf');
+      expect(pdf.metadataS3Key).toBe(
+        'tenant-001/annual-report_pdf_v1.0.metadata.json',
+      );
+
+      // Metadata keys must be distinct to prevent cross-format collision
+      expect(docx.metadataS3Key).not.toBe(pdf.metadataS3Key);
+    });
+
+    it('should honor explicitly requested higher semantic version', async () => {
+      await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'handbook.pdf',
+        version: '1.0',
+      });
+
+      const bumped = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'handbook.pdf',
+        version: '2.0',
+      });
+
+      expect(bumped.s3Key).toBe('tenant-001/handbook_pdf_v2.0.pdf');
+      expect(bumped.metadataS3Key).toBe(
+        'tenant-001/handbook_pdf_v2.0.metadata.json',
+      );
     });
   });
 
@@ -108,10 +170,10 @@ describe('DocumentsService', () => {
       expect(completed.fileSize).toBe(2048);
       expect(completed.uploadedAt).toBeDefined();
       expect(storage.verifyObjectExists).toHaveBeenCalledWith(
-        'tenant-001/performance-policy.pdf',
+        'tenant-001/performance-policy_pdf_v1.0.pdf',
       );
       expect(storage.writeMetadataJson).toHaveBeenCalledWith(
-        'tenant-001/performance-policy.metadata.json',
+        'tenant-001/performance-policy_pdf_v1.0.metadata.json',
         expect.objectContaining({
           schema_version: '1.0',
           tenant_id: 'tenant-001',
@@ -159,12 +221,12 @@ describe('DocumentsService', () => {
       expect(res.status).toBe(DocumentUploadStatus.UPLOADED);
       expect(res.stem).toBe('direct-upload');
       expect(storage.uploadDirect).toHaveBeenCalledWith(
-        'tenant-001/direct-upload.pdf',
+        'tenant-001/direct-upload_pdf_v1.0.pdf',
         mockFile.buffer,
         'application/pdf',
       );
       expect(storage.writeMetadataJson).toHaveBeenCalledWith(
-        'tenant-001/direct-upload.metadata.json',
+        'tenant-001/direct-upload_pdf_v1.0.metadata.json',
         expect.any(Object),
       );
     });
@@ -207,7 +269,7 @@ describe('DocumentsService', () => {
       expect(updated.metadata.access.excluded_users).toEqual(['user-charlie']);
       expect(updated.metadata.document.categories).toEqual(['governance']);
       expect(storage.writeMetadataJson).toHaveBeenCalledWith(
-        'tenant-001/policy.metadata.json',
+        'tenant-001/policy_pdf_v1.0.metadata.json',
         expect.objectContaining({
           access: {
             departments: ['engineering', 'compliance'],
@@ -285,7 +347,8 @@ describe('DocumentsService', () => {
       );
       expect(download.downloadUrl).toBe('https://s3.test/download');
       expect(storage.getDownloadPresignedUrl).toHaveBeenCalledWith(
-        'tenant-001/downloadable.pdf',
+        'tenant-001/downloadable_pdf_v1.0.pdf',
+        'downloadable.pdf',
       );
     });
 
@@ -306,8 +369,8 @@ describe('DocumentsService', () => {
       );
       expect(deleteRes.success).toBe(true);
       expect(storage.deleteFilePair).toHaveBeenCalledWith(
-        'tenant-001/to-delete.pdf',
-        'tenant-001/to-delete.metadata.json',
+        'tenant-001/to-delete_pdf_v1.0.pdf',
+        'tenant-001/to-delete_pdf_v1.0.metadata.json',
       );
 
       await expect(

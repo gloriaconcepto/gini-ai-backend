@@ -48,6 +48,58 @@ export class InMemoryDocumentRepository implements IDocumentRepository {
     return null;
   }
 
+  private compareVersions(v1?: string, v2?: string): number {
+    const parse = (v?: string): number[] => {
+      if (!v) return [0];
+      return v
+        .replace(/^v/i, '')
+        .split('.')
+        .map((p) => {
+          const num = parseInt(p, 10);
+          return isNaN(num) ? 0 : num;
+        });
+    };
+    const parts1 = parse(v1);
+    const parts2 = parse(v2);
+    const maxLen = Math.max(parts1.length, parts2.length);
+    for (let i = 0; i < maxLen; i++) {
+      const p1 = parts1[i] ?? 0;
+      const p2 = parts2[i] ?? 0;
+      if (p1 > p2) return 1;
+      if (p1 < p2) return -1;
+    }
+    return 0;
+  }
+
+  async findLatestVersion(
+    tenantId: string,
+    baseStem: string,
+    extension: string,
+  ): Promise<DocumentEntity | null> {
+    const normalizedExt = extension.toLowerCase();
+    const normalizedStem = baseStem.toLowerCase();
+
+    let latestDoc: DocumentEntity | null = null;
+
+    for (const doc of this.documents.values()) {
+      if (
+        doc.tenantId === tenantId &&
+        doc.stem.toLowerCase() === normalizedStem &&
+        doc.extension.toLowerCase() === normalizedExt &&
+        doc.status !== DocumentUploadStatus.DELETED
+      ) {
+        if (
+          !latestDoc ||
+          this.compareVersions(doc.version, latestDoc.version) > 0
+        ) {
+          latestDoc = doc;
+        }
+      }
+    }
+
+    return latestDoc ? JSON.parse(JSON.stringify(latestDoc)) : null;
+  }
+
   async update(
     tenantId: string,
     id: string,
