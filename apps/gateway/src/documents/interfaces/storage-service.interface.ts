@@ -27,6 +27,7 @@ export interface IStorageService {
 
   getDownloadPresignedUrl(
     s3Key: string,
+    originalFileName?: string,
     expiresInSeconds?: number,
   ): Promise<string>;
 

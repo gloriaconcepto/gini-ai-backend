@@ -48,6 +48,107 @@ export class DocumentsService {
     return { stem, extension };
   }
 
+  private slugify(text: string): string {
+    return (
+      text
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'document'
+    );
+  }
+
+  private compareVersions(v1?: string, v2?: string): number {
+    const parse = (v?: string): number[] => {
+      if (!v) return [0];
+      return v
+        .replace(/^v/i, '')
+        .split('.')
+        .map((p) => {
+          const num = parseInt(p, 10);
+          return isNaN(num) ? 0 : num;
+        });
+    };
+    const parts1 = parse(v1);
+    const parts2 = parse(v2);
+    const maxLen = Math.max(parts1.length, parts2.length);
+    for (let i = 0; i < maxLen; i++) {
+      const p1 = parts1[i] ?? 0;
+      const p2 = parts2[i] ?? 0;
+      if (p1 > p2) return 1;
+      if (p1 < p2) return -1;
+    }
+    return 0;
+  }
+
+  private incrementVersion(currentVersion: string): string {
+    const clean = currentVersion.replace(/^v/i, '');
+    const parts = clean.split('.').map((p) => {
+      const num = parseInt(p, 10);
+      return isNaN(num) ? 0 : num;
+    });
+
+    if (parts.length === 1) {
+      return `${parts[0]! + 1}.0`;
+    }
+
+    const major = parts[0] ?? 1;
+    const minor = (parts[1] ?? 0) + 1;
+    return `${major}.${minor}`;
+  }
+
+  private async resolveNextVersion(
+    tenantId: string,
+    baseStem: string,
+    extension: string,
+    requestedVersion?: string,
+  ): Promise<string> {
+    const latest = await this.repository.findLatestVersion(
+      tenantId,
+      baseStem,
+      extension,
+    );
+
+    if (!latest || !latest.version) {
+      return requestedVersion || '1.0';
+    }
+
+    if (
+      requestedVersion &&
+      this.compareVersions(requestedVersion, latest.version) > 0
+    ) {
+      return requestedVersion;
+    }
+
+    return this.incrementVersion(latest.version);
+  }
+
+  private buildStorageKeys(
+    tenantId: string,
+    baseStem: string,
+    extension: string,
+    version: string,
+  ): {
+    storageStem: string;
+    s3Key: string;
+    metadataS3Key: string;
+    storageFileName: string;
+  } {
+    const cleanExt = extension.replace(/^\./, '').toLowerCase() || 'bin';
+    const slugStem = this.slugify(baseStem);
+    const storageStem = `${slugStem}_${cleanExt}_v${version}`;
+    const storageFileName = `${storageStem}${extension}`;
+    const s3Key = `${tenantId}/${storageFileName}`;
+    const metadataS3Key = `${tenantId}/${storageStem}.metadata.json`;
+
+    return {
+      storageStem,
+      s3Key,
+      metadataS3Key,
+      storageFileName,
+    };
+  }
+
   async initiateUpload(
     tenantId: string,
     userId: string,
@@ -57,17 +158,25 @@ export class DocumentsService {
     const documentId = crypto.randomUUID();
     const contentType = dto.mimeType || 'application/octet-stream';
 
-    // Required S3 File Pair: <tenant-id>/<stem>.<ext> and <tenant-id>/<stem>.metadata.json
-    const s3Key = `${tenantId}/${dto.fileName}`;
-    const metadataS3Key = `${tenantId}/${stem}.metadata.json`;
+    // Resolve semantic version to avoid collision
+    const resolvedVersion = await this.resolveNextVersion(
+      tenantId,
+      stem,
+      extension,
+      dto.version,
+    );
+
+    // Format-inclusive, semantic-versioned S3 keys
+    const { storageStem, s3Key, metadataS3Key, storageFileName } =
+      this.buildStorageKeys(tenantId, stem, extension, resolvedVersion);
 
     const metadata: IngestionMetadataV1 = {
       schema_version: '1.0',
       tenant_id: tenantId,
       document: {
-        document_id: stem,
+        document_id: storageStem,
         name: dto.name || stem,
-        version: dto.version || '1.0',
+        version: resolvedVersion,
         categories: dto.categories || [],
       },
       access: {
@@ -82,7 +191,7 @@ export class DocumentsService {
 
     const presigned = await this.storage.getUploadPresignedUrl(
       tenantId,
-      dto.fileName,
+      storageFileName,
       contentType,
     );
 
@@ -91,7 +200,9 @@ export class DocumentsService {
       tenantId,
       fileName: dto.fileName,
       stem,
+      storageStem,
       extension,
+      version: resolvedVersion,
       mimeType: contentType,
       fileSize: dto.fileSize || 0,
       s3Key,
@@ -170,16 +281,29 @@ export class DocumentsService {
     const documentId = crypto.randomUUID();
     const contentType = file.mimetype || 'application/octet-stream';
 
-    const s3Key = `${tenantId}/${fileName}`;
-    const metadataS3Key = `${tenantId}/${stem}.metadata.json`;
+    // Resolve semantic version to avoid collision
+    const resolvedVersion = await this.resolveNextVersion(
+      tenantId,
+      stem,
+      extension,
+      dto.version,
+    );
+
+    // Format-inclusive, semantic-versioned S3 keys
+    const { storageStem, s3Key, metadataS3Key } = this.buildStorageKeys(
+      tenantId,
+      stem,
+      extension,
+      resolvedVersion,
+    );
 
     const metadata: IngestionMetadataV1 = {
       schema_version: '1.0',
       tenant_id: tenantId,
       document: {
-        document_id: stem,
+        document_id: storageStem,
         name: dto.name || stem,
-        version: dto.version || '1.0',
+        version: resolvedVersion,
         categories: dto.categories || [],
       },
       access: {
@@ -207,7 +331,9 @@ export class DocumentsService {
       tenantId,
       fileName,
       stem,
+      storageStem,
       extension,
+      version: resolvedVersion,
       mimeType: contentType,
       fileSize: directResult.size,
       s3Key,
@@ -311,7 +437,10 @@ export class DocumentsService {
       );
     }
 
-    const downloadUrl = await this.storage.getDownloadPresignedUrl(doc.s3Key);
+    const downloadUrl = await this.storage.getDownloadPresignedUrl(
+      doc.s3Key,
+      doc.fileName,
+    );
     return {
       downloadUrl,
       expiresIn: 300,

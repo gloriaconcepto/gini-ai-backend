@@ -81,6 +81,46 @@ describe('InMemoryDocumentRepository', () => {
     expect(notFound).toBeNull();
   });
 
+  it('should find latest semantic version for tenant, stem, and extension', async () => {
+    await repository.create({
+      ...sampleDoc,
+      id: 'doc-v1',
+      version: '1.0',
+    });
+    await repository.create({
+      ...sampleDoc,
+      id: 'doc-v2',
+      version: '1.1',
+    });
+    await repository.create({
+      ...sampleDoc,
+      id: 'doc-v3',
+      version: '1.9',
+    });
+    await repository.create({
+      ...sampleDoc,
+      id: 'doc-v4',
+      version: '1.10',
+    });
+
+    const latest = await repository.findLatestVersion(
+      'tenant-001',
+      'performance-policy',
+      '.pdf',
+    );
+    expect(latest).toBeDefined();
+    expect(latest?.id).toBe('doc-v4');
+    expect(latest?.version).toBe('1.10');
+
+    // Different extension should return null
+    const diffExt = await repository.findLatestVersion(
+      'tenant-001',
+      'performance-policy',
+      '.docx',
+    );
+    expect(diffExt).toBeNull();
+  });
+
   it('should update document fields', async () => {
     await repository.create(sampleDoc);
 

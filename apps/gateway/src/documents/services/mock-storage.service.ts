@@ -55,9 +55,22 @@ export class MockStorageService implements IStorageService {
 
   async getDownloadPresignedUrl(
     s3Key: string,
+    originalFileNameOrExpiry?: string | number,
     expiresInSeconds: number = 300,
   ): Promise<string> {
-    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}?X-Amz-Expires=${expiresInSeconds}&mock-download=true`;
+    const filename =
+      typeof originalFileNameOrExpiry === 'string'
+        ? originalFileNameOrExpiry
+        : undefined;
+    const expiry =
+      typeof originalFileNameOrExpiry === 'number'
+        ? originalFileNameOrExpiry
+        : expiresInSeconds;
+
+    const filenameParam = filename
+      ? `&response-content-disposition=${encodeURIComponent(`attachment; filename="${filename}"`)}`
+      : '';
+    return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${s3Key}?X-Amz-Expires=${expiry}&mock-download=true${filenameParam}`;
   }
 
   async writeMetadataJson(

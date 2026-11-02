@@ -77,6 +77,15 @@ describe('S3StorageService', () => {
     expect(url).toBe('https://s3.us-west-2.amazonaws.com/test-url');
   });
 
+  it('should generate a download presigned URL with original filename Content-Disposition', async () => {
+    const url = await service.getDownloadPresignedUrl(
+      'tenant-001/performance-policy_pdf_v1.0.pdf',
+      'Original Performance Policy.pdf',
+      300,
+    );
+    expect(url).toBe('https://s3.us-west-2.amazonaws.com/test-url');
+  });
+
   it('should write metadata JSON to S3', async () => {
     mockSend.mockResolvedValueOnce({});
     await service.writeMetadataJson('tenant-001/performance-policy.metadata.json', sampleMetadata);
