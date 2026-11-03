@@ -2,6 +2,9 @@ export enum DocumentUploadStatus {
   PENDING_UPLOAD = 'PENDING_UPLOAD',
   UPLOADING = 'UPLOADING',
   UPLOADED = 'UPLOADED',
+  APPROVED = 'APPROVED',
+  PUBLISHED = 'PUBLISHED',
+  REJECTED = 'REJECTED',
   FAILED = 'FAILED',
   DELETED = 'DELETED',
 }
@@ -44,6 +47,12 @@ export interface DocumentEntity {
   metadata: IngestionMetadataV1;
   uploadedBy: string;
   uploadedAt?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  approvalComment?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
   errorMessage?: string;

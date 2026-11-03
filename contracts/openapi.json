@@ -2329,7 +2329,7 @@
     },
     "/documents/{id}/complete": {
       "post": {
-        "description": "Verifies the uploaded file exists on S3, writes the paired .metadata.json file, and transitions state to UPLOADED.",
+        "description": "Verifies the uploaded file exists on S3 and transitions state to UPLOADED (staged awaiting Checker approval). Metadata JSON is not written until approval.",
         "operationId": "DocumentsController_completeUpload",
         "parameters": [
           {
@@ -2352,7 +2352,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Document upload confirmed and metadata written.",
+            "description": "Document upload confirmed and staged in UPLOADED status.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2368,6 +2368,133 @@
           }
         ],
         "summary": "Confirm direct S3 upload completion",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents/{id}/approve": {
+      "post": {
+        "description": "Approves a staged document, writes the companion .metadata.json sidecar to S3, and transitions state to APPROVED, triggering the EventBridge RAG ingestion pipeline.",
+        "operationId": "DocumentsController_approveDocument",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Document approved and metadata written to S3.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Document cannot be approved in its current state or is already approved."
+          },
+          "403": {
+            "description": "Forbidden - Maker cannot approve their own uploaded document (dual-control violation)."
+          },
+          "404": {
+            "description": "Document not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve document and trigger RAG ingestion",
+        "tags": [
+          "Document Management & Ingestion"
+        ]
+      }
+    },
+    "/documents/{id}/reject": {
+      "post": {
+        "description": "Rejects a staged document with a mandatory justification comment and transitions state to REJECTED without writing metadata to S3.",
+        "operationId": "DocumentsController_rejectDocument",
+        "parameters": [
+          {
+            "name": "X-Tenant-ID",
+            "in": "header",
+            "description": "Target tenant identifier for multi-tenant document isolation",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectDocumentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Document rejected successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing mandatory rejection reason."
+          },
+          "404": {
+            "description": "Document not found."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject document from RAG ingestion",
         "tags": [
           "Document Management & Ingestion"
         ]
@@ -2619,6 +2746,9 @@
                 "PENDING_UPLOAD",
                 "UPLOADING",
                 "UPLOADED",
+                "APPROVED",
+                "PUBLISHED",
+                "REJECTED",
                 "FAILED",
                 "DELETED"
               ],
@@ -4292,6 +4422,9 @@
               "PENDING_UPLOAD",
               "UPLOADING",
               "UPLOADED",
+              "APPROVED",
+              "PUBLISHED",
+              "REJECTED",
               "FAILED",
               "DELETED"
             ],
@@ -4455,6 +4588,9 @@
               "PENDING_UPLOAD",
               "UPLOADING",
               "UPLOADED",
+              "APPROVED",
+              "PUBLISHED",
+              "REJECTED",
               "FAILED",
               "DELETED"
             ],
@@ -4470,6 +4606,30 @@
           "uploadedAt": {
             "type": "string",
             "example": "2026-10-13T16:00:00Z"
+          },
+          "approvedBy": {
+            "type": "string",
+            "example": "user-checker-456"
+          },
+          "approvedAt": {
+            "type": "string",
+            "example": "2026-10-13T16:30:00Z"
+          },
+          "approvalComment": {
+            "type": "string",
+            "example": "Reviewed and compliant with corporate RAG governance policies."
+          },
+          "rejectedBy": {
+            "type": "string",
+            "example": "user-checker-456"
+          },
+          "rejectedAt": {
+            "type": "string",
+            "example": "2026-10-13T16:30:00Z"
+          },
+          "rejectionReason": {
+            "type": "string",
+            "example": "Classification discrepancy: missing required department restrictions."
           },
           "createdAt": {
             "type": "string",
@@ -4499,6 +4659,29 @@
           "uploadedBy",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "ApproveDocumentDto": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "description": "Optional review comments or sign-off notes from the Checker",
+            "example": "Reviewed and compliant with corporate RAG governance policies."
+          }
+        }
+      },
+      "RejectDocumentDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Mandatory justification reason for document rejection",
+            "example": "Classification discrepancy: missing required department restrictions."
+          }
+        },
+        "required": [
+          "reason"
         ]
       },
       "UpdateDocumentAccessDto": {

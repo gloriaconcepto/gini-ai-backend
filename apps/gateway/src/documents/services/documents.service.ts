@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -19,6 +20,8 @@ import { STORAGE_SERVICE_TOKEN } from '../interfaces/storage-service.interface';
 import type { IStorageService } from '../interfaces/storage-service.interface';
 import { InitiateUploadDto } from '../dto/initiate-upload.dto';
 import { UpdateDocumentAccessDto } from '../dto/update-access.dto';
+import { ApproveDocumentDto } from '../dto/approve-document.dto';
+import { RejectDocumentDto } from '../dto/reject-document.dto';
 import {
   DocumentListResponseDto,
   DocumentResponseDto,
@@ -249,9 +252,8 @@ export class DocumentsService {
       );
     }
 
-    // Write accompanying metadata JSON file using the same filename stem
-    await this.storage.writeMetadataJson(doc.metadataS3Key, doc.metadata);
-
+    // Verification passed - stage in UPLOADED status without writing metadata JSON yet
+    // Metadata JSON is only written to S3 upon explicit approval (POST /documents/:id/approve)
     const updated = await this.repository.update(tenantId, documentId, {
       status: DocumentUploadStatus.UPLOADED,
       fileSize: verification.size ?? doc.fileSize,
@@ -260,7 +262,95 @@ export class DocumentsService {
     });
 
     this.logger.log(
-      `Document ${doc.fileName} (id: ${documentId}) successfully completed and paired with ${doc.metadataS3Key}`,
+      `Document ${doc.fileName} (id: ${documentId}) upload verified and staged in UPLOADED status awaiting approval`,
+    );
+
+    return this.mapToResponseDto(updated!);
+  }
+
+  async approveDocument(
+    tenantId: string,
+    documentId: string,
+    userId: string,
+    userRoles: string[] = [],
+    dto?: ApproveDocumentDto,
+  ): Promise<DocumentResponseDto> {
+    const doc = await this.repository.findById(tenantId, documentId);
+    if (!doc) {
+      throw new NotFoundException(`Document ${documentId} not found`);
+    }
+
+    if (
+      doc.status === DocumentUploadStatus.APPROVED ||
+      doc.status === DocumentUploadStatus.PUBLISHED
+    ) {
+      throw new BadRequestException(
+        `Document ${documentId} is already approved`,
+      );
+    }
+
+    if (
+      doc.status !== DocumentUploadStatus.UPLOADED &&
+      doc.status !== DocumentUploadStatus.REJECTED
+    ) {
+      throw new BadRequestException(
+        `Cannot approve document in "${doc.status}" state. Only UPLOADED or REJECTED documents can be approved.`,
+      );
+    }
+
+    // Dual-control enforcement: Maker cannot approve their own uploaded document unless user has admin role
+    const isAdmin = userRoles.some((r) => r.toLowerCase() === 'admin');
+    if (!isAdmin && doc.uploadedBy === userId) {
+      throw new ForbiddenException(
+        'Maker cannot approve their own uploaded document (dual-control violation)',
+      );
+    }
+
+    // Write accompanying metadata JSON file to S3, triggering EventBridge -> SQS -> RAG ingestion
+    await this.storage.writeMetadataJson(doc.metadataS3Key, doc.metadata);
+
+    const updated = await this.repository.update(tenantId, documentId, {
+      status: DocumentUploadStatus.APPROVED,
+      approvedBy: userId,
+      approvedAt: new Date().toISOString(),
+      approvalComment: dto?.comment,
+      rejectedBy: undefined,
+      rejectedAt: undefined,
+      rejectionReason: undefined,
+    });
+
+    this.logger.log(
+      `Document ${doc.fileName} (id: ${documentId}) approved by ${userId} and metadata written to S3 at ${doc.metadataS3Key}`,
+    );
+
+    return this.mapToResponseDto(updated!);
+  }
+
+  async rejectDocument(
+    tenantId: string,
+    documentId: string,
+    userId: string,
+    userRoles: string[] = [],
+    dto: RejectDocumentDto,
+  ): Promise<DocumentResponseDto> {
+    const doc = await this.repository.findById(tenantId, documentId);
+    if (!doc) {
+      throw new NotFoundException(`Document ${documentId} not found`);
+    }
+
+    if (!dto?.reason) {
+      throw new BadRequestException('Rejection reason is mandatory');
+    }
+
+    const updated = await this.repository.update(tenantId, documentId, {
+      status: DocumentUploadStatus.REJECTED,
+      rejectedBy: userId,
+      rejectedAt: new Date().toISOString(),
+      rejectionReason: dto.reason,
+    });
+
+    this.logger.log(
+      `Document ${doc.fileName} (id: ${documentId}) rejected by ${userId}: ${dto.reason}`,
     );
 
     return this.mapToResponseDto(updated!);
@@ -323,9 +413,7 @@ export class DocumentsService {
       contentType,
     );
 
-    // 2. Upload accompanying authorization metadata file
-    await this.storage.writeMetadataJson(metadataS3Key, metadata);
-
+    // Note: Do NOT write metadata JSON here. It is staged in UPLOADED status until approved.
     const docEntity: DocumentEntity = {
       id: documentId,
       tenantId,
@@ -377,16 +465,24 @@ export class DocumentsService {
       },
     };
 
-    // Update metadata JSON on S3 directly (without touching the PDF)
-    await this.storage.writeMetadataJson(doc.metadataS3Key, updatedMetadata);
+    // Only rewrite metadata JSON on S3 directly if the document is already approved
+    if (
+      doc.status === DocumentUploadStatus.APPROVED ||
+      doc.status === DocumentUploadStatus.PUBLISHED
+    ) {
+      await this.storage.writeMetadataJson(doc.metadataS3Key, updatedMetadata);
+      this.logger.log(
+        `Updated authorization metadata for approved document ${documentId} on S3 at ${doc.metadataS3Key}`,
+      );
+    } else {
+      this.logger.log(
+        `Updated authorization metadata for staged document ${documentId} in repository (not written to S3 until approved)`,
+      );
+    }
 
     const updatedDoc = await this.repository.update(tenantId, documentId, {
       metadata: updatedMetadata,
     });
-
-    this.logger.log(
-      `Updated authorization metadata for document ${documentId} on S3 at ${doc.metadataS3Key}`,
-    );
 
     return this.mapToResponseDto(updatedDoc!);
   }
@@ -431,7 +527,11 @@ export class DocumentsService {
     if (!doc) {
       throw new NotFoundException(`Document ${documentId} not found`);
     }
-    if (doc.status !== DocumentUploadStatus.UPLOADED) {
+    if (
+      doc.status !== DocumentUploadStatus.UPLOADED &&
+      doc.status !== DocumentUploadStatus.APPROVED &&
+      doc.status !== DocumentUploadStatus.PUBLISHED
+    ) {
       throw new BadRequestException(
         `Cannot download document in "${doc.status}" state`,
       );
@@ -482,6 +582,12 @@ export class DocumentsService {
       metadata: entity.metadata,
       uploadedBy: entity.uploadedBy,
       uploadedAt: entity.uploadedAt,
+      approvedBy: entity.approvedBy,
+      approvedAt: entity.approvedAt,
+      approvalComment: entity.approvalComment,
+      rejectedBy: entity.rejectedBy,
+      rejectedAt: entity.rejectedAt,
+      rejectionReason: entity.rejectionReason,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       errorMessage: entity.errorMessage,

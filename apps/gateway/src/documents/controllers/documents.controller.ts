@@ -27,6 +27,8 @@ import {
 import { DocumentsService } from '../services/documents.service';
 import { InitiateUploadDto } from '../dto/initiate-upload.dto';
 import { UpdateDocumentAccessDto } from '../dto/update-access.dto';
+import { ApproveDocumentDto } from '../dto/approve-document.dto';
+import { RejectDocumentDto } from '../dto/reject-document.dto';
 import {
   DocumentListResponseDto,
   DocumentResponseDto,
@@ -57,6 +59,10 @@ export class DocumentsController {
 
   private extractUserId(req: any): string {
     return req.user?.userId || req.user?.sub || 'system-user';
+  }
+
+  private extractUserRoles(req: any): string[] {
+    return req.user?.roles || [];
   }
 
   @Post('upload-url')
@@ -171,11 +177,11 @@ export class DocumentsController {
   @ApiOperation({
     summary: 'Confirm direct S3 upload completion',
     description:
-      'Verifies the uploaded file exists on S3, writes the paired .metadata.json file, and transitions state to UPLOADED.',
+      'Verifies the uploaded file exists on S3 and transitions state to UPLOADED (staged awaiting Checker approval). Metadata JSON is not written until approval.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Document upload confirmed and metadata written.',
+    description: 'Document upload confirmed and staged in UPLOADED status.',
     type: DocumentResponseDto,
   })
   async completeUpload(
@@ -184,6 +190,86 @@ export class DocumentsController {
   ): Promise<DocumentResponseDto> {
     const tenantId = this.extractTenantId(req);
     return this.documentsService.completeUpload(tenantId, documentId);
+  }
+
+  @Post(':id/approve')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Approve document and trigger RAG ingestion',
+    description:
+      'Approves a staged document, writes the companion .metadata.json sidecar to S3, and transitions state to APPROVED, triggering the EventBridge RAG ingestion pipeline.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document approved and metadata written to S3.',
+    type: DocumentResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Document cannot be approved in its current state or is already approved.',
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      'Forbidden - Maker cannot approve their own uploaded document (dual-control violation).',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found.',
+  })
+  async approveDocument(
+    @Req() req: any,
+    @Param('id') documentId: string,
+    @Body() dto?: ApproveDocumentDto,
+  ): Promise<DocumentResponseDto> {
+    const tenantId = this.extractTenantId(req);
+    const userId = this.extractUserId(req);
+    const userRoles = this.extractUserRoles(req);
+    return this.documentsService.approveDocument(
+      tenantId,
+      documentId,
+      userId,
+      userRoles,
+      dto,
+    );
+  }
+
+  @Post(':id/reject')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Reject document from RAG ingestion',
+    description:
+      'Rejects a staged document with a mandatory justification comment and transitions state to REJECTED without writing metadata to S3.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Document rejected successfully.',
+    type: DocumentResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Missing mandatory rejection reason.',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found.',
+  })
+  async rejectDocument(
+    @Req() req: any,
+    @Param('id') documentId: string,
+    @Body() dto: RejectDocumentDto,
+  ): Promise<DocumentResponseDto> {
+    const tenantId = this.extractTenantId(req);
+    const userId = this.extractUserId(req);
+    const userRoles = this.extractUserRoles(req);
+    return this.documentsService.rejectDocument(
+      tenantId,
+      documentId,
+      userId,
+      userRoles,
+      dto,
+    );
   }
 
   @Patch(':id/access')
