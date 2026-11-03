@@ -217,6 +217,9 @@ export class InMemoryDocumentRepository implements IDocumentRepository {
       [DocumentUploadStatus.PENDING_UPLOAD]: 0,
       [DocumentUploadStatus.UPLOADING]: 0,
       [DocumentUploadStatus.UPLOADED]: 0,
+      [DocumentUploadStatus.APPROVED]: 0,
+      [DocumentUploadStatus.PUBLISHED]: 0,
+      [DocumentUploadStatus.REJECTED]: 0,
       [DocumentUploadStatus.FAILED]: 0,
       [DocumentUploadStatus.DELETED]: 0,
     };
@@ -232,7 +235,11 @@ export class InMemoryDocumentRepository implements IDocumentRepository {
       }
 
       totalDocuments++;
-      if (doc.status === DocumentUploadStatus.UPLOADED) {
+      if (
+        doc.status === DocumentUploadStatus.UPLOADED ||
+        doc.status === DocumentUploadStatus.APPROVED ||
+        doc.status === DocumentUploadStatus.PUBLISHED
+      ) {
         totalSizeBytes += doc.fileSize || 0;
       }
 

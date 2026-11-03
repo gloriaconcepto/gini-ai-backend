@@ -51,6 +51,20 @@ describe('DocumentsController', () => {
         status: DocumentUploadStatus.PENDING_UPLOAD,
       }),
       completeUpload: jest.fn().mockResolvedValue(mockDocumentResponse),
+      approveDocument: jest.fn().mockResolvedValue({
+        ...mockDocumentResponse,
+        status: DocumentUploadStatus.APPROVED,
+        approvedBy: 'user-admin',
+        approvedAt: '2026-10-13T16:30:00Z',
+        approvalComment: 'Approved for RAG',
+      }),
+      rejectDocument: jest.fn().mockResolvedValue({
+        ...mockDocumentResponse,
+        status: DocumentUploadStatus.REJECTED,
+        rejectedBy: 'user-admin',
+        rejectedAt: '2026-10-13T16:30:00Z',
+        rejectionReason: 'Missing department',
+      }),
       uploadDirect: jest.fn().mockResolvedValue(mockDocumentResponse),
       updateAccess: jest.fn().mockResolvedValue(mockDocumentResponse),
       getDocument: jest.fn().mockResolvedValue(mockDocumentResponse),
@@ -100,6 +114,7 @@ describe('DocumentsController', () => {
     user: {
       tenantId: 'tenant-001',
       userId: 'user-admin',
+      roles: ['admin'],
     },
     headers: {},
   };
@@ -166,6 +181,34 @@ describe('DocumentsController', () => {
     expect(service.completeUpload).toHaveBeenCalledWith(
       'tenant-001',
       'doc-123',
+    );
+  });
+
+  it('should approve document and call service', async () => {
+    const res = await controller.approveDocument(mockReqWithJwt, 'doc-123', {
+      comment: 'Approved for RAG',
+    });
+    expect(res.status).toBe(DocumentUploadStatus.APPROVED);
+    expect(service.approveDocument).toHaveBeenCalledWith(
+      'tenant-001',
+      'doc-123',
+      'user-admin',
+      ['admin'],
+      { comment: 'Approved for RAG' },
+    );
+  });
+
+  it('should reject document and call service', async () => {
+    const res = await controller.rejectDocument(mockReqWithJwt, 'doc-123', {
+      reason: 'Missing department',
+    });
+    expect(res.status).toBe(DocumentUploadStatus.REJECTED);
+    expect(service.rejectDocument).toHaveBeenCalledWith(
+      'tenant-001',
+      'doc-123',
+      'user-admin',
+      ['admin'],
+      { reason: 'Missing department' },
     );
   });
 

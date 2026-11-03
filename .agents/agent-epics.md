@@ -166,7 +166,9 @@ This document serves as the single source of truth for agents to understand the 
 - [x] Direct Upload & State Machine:
   - [x] Presigned PUT URL generation via `POST /documents/upload-url` (status: `PENDING_UPLOAD`).
   - [x] Direct multipart streaming fallback via `POST /documents/upload`.
-  - [x] Verification and completion via `POST /documents/:id/complete` (S3 HeadObject verification, write metadata JSON, transition to `UPLOADED`).
+  - [x] Verification and completion via `POST /documents/:id/complete` (S3 HeadObject verification, stages file in `UPLOADED` status without writing metadata JSON).
+  - [x] Approval-gated ingestion via `POST /documents/:id/approve` (writes `<stem>.metadata.json` to S3, transitions state to `APPROVED`, triggers EventBridge RAG ingestion).
+  - [x] Rejection governance via `POST /documents/:id/reject` (transitions state to `REJECTED` with mandatory reason without writing metadata to S3).
   - [x] Query and status display via `GET /documents/:id`, `GET /documents` (paginated, filters), and `GET /documents/summary`.
   - [x] Secure presigned download via `GET /documents/:id/download-url`.
   - [x] Purge file pair from S3 via `DELETE /documents/:id`.
