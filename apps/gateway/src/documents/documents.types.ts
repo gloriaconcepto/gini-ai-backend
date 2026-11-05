@@ -2,6 +2,9 @@ export enum DocumentUploadStatus {
   PENDING_UPLOAD = 'PENDING_UPLOAD',
   UPLOADING = 'UPLOADING',
   UPLOADED = 'UPLOADED',
+  APPROVED = 'APPROVED',
+  PUBLISHED = 'PUBLISHED',
+  REJECTED = 'REJECTED',
   FAILED = 'FAILED',
   DELETED = 'DELETED',
 }
@@ -33,7 +36,9 @@ export interface DocumentEntity {
   tenantId: string;
   fileName: string;
   stem: string;
+  storageStem?: string;
   extension: string;
+  version?: string;
   mimeType: string;
   fileSize: number;
   s3Key: string;
@@ -42,6 +47,12 @@ export interface DocumentEntity {
   metadata: IngestionMetadataV1;
   uploadedBy: string;
   uploadedAt?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  approvalComment?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
   errorMessage?: string;
@@ -76,6 +87,11 @@ export interface IDocumentRepository {
   create(doc: DocumentEntity): Promise<DocumentEntity>;
   findById(tenantId: string, id: string): Promise<DocumentEntity | null>;
   findByStem(tenantId: string, stem: string): Promise<DocumentEntity | null>;
+  findLatestVersion(
+    tenantId: string,
+    baseStem: string,
+    extension: string,
+  ): Promise<DocumentEntity | null>;
   update(
     tenantId: string,
     id: string,

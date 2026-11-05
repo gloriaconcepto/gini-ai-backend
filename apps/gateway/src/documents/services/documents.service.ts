@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -19,6 +20,8 @@ import { STORAGE_SERVICE_TOKEN } from '../interfaces/storage-service.interface';
 import type { IStorageService } from '../interfaces/storage-service.interface';
 import { InitiateUploadDto } from '../dto/initiate-upload.dto';
 import { UpdateDocumentAccessDto } from '../dto/update-access.dto';
+import { ApproveDocumentDto } from '../dto/approve-document.dto';
+import { RejectDocumentDto } from '../dto/reject-document.dto';
 import {
   DocumentListResponseDto,
   DocumentResponseDto,
@@ -48,6 +51,107 @@ export class DocumentsService {
     return { stem, extension };
   }
 
+  private slugify(text: string): string {
+    return (
+      text
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'document'
+    );
+  }
+
+  private compareVersions(v1?: string, v2?: string): number {
+    const parse = (v?: string): number[] => {
+      if (!v) return [0];
+      return v
+        .replace(/^v/i, '')
+        .split('.')
+        .map((p) => {
+          const num = parseInt(p, 10);
+          return isNaN(num) ? 0 : num;
+        });
+    };
+    const parts1 = parse(v1);
+    const parts2 = parse(v2);
+    const maxLen = Math.max(parts1.length, parts2.length);
+    for (let i = 0; i < maxLen; i++) {
+      const p1 = parts1[i] ?? 0;
+      const p2 = parts2[i] ?? 0;
+      if (p1 > p2) return 1;
+      if (p1 < p2) return -1;
+    }
+    return 0;
+  }
+
+  private incrementVersion(currentVersion: string): string {
+    const clean = currentVersion.replace(/^v/i, '');
+    const parts = clean.split('.').map((p) => {
+      const num = parseInt(p, 10);
+      return isNaN(num) ? 0 : num;
+    });
+
+    if (parts.length === 1) {
+      return `${parts[0]! + 1}.0`;
+    }
+
+    const major = parts[0] ?? 1;
+    const minor = (parts[1] ?? 0) + 1;
+    return `${major}.${minor}`;
+  }
+
+  private async resolveNextVersion(
+    tenantId: string,
+    baseStem: string,
+    extension: string,
+    requestedVersion?: string,
+  ): Promise<string> {
+    const latest = await this.repository.findLatestVersion(
+      tenantId,
+      baseStem,
+      extension,
+    );
+
+    if (!latest || !latest.version) {
+      return requestedVersion || '1.0';
+    }
+
+    if (
+      requestedVersion &&
+      this.compareVersions(requestedVersion, latest.version) > 0
+    ) {
+      return requestedVersion;
+    }
+
+    return this.incrementVersion(latest.version);
+  }
+
+  private buildStorageKeys(
+    tenantId: string,
+    baseStem: string,
+    extension: string,
+    version: string,
+  ): {
+    storageStem: string;
+    s3Key: string;
+    metadataS3Key: string;
+    storageFileName: string;
+  } {
+    const cleanExt = extension.replace(/^\./, '').toLowerCase() || 'bin';
+    const slugStem = this.slugify(baseStem);
+    const storageStem = `${slugStem}_${cleanExt}_v${version}`;
+    const storageFileName = `${storageStem}${extension}`;
+    const s3Key = `${tenantId}/${storageFileName}`;
+    const metadataS3Key = `${tenantId}/${storageStem}.metadata.json`;
+
+    return {
+      storageStem,
+      s3Key,
+      metadataS3Key,
+      storageFileName,
+    };
+  }
+
   async initiateUpload(
     tenantId: string,
     userId: string,
@@ -57,17 +161,25 @@ export class DocumentsService {
     const documentId = crypto.randomUUID();
     const contentType = dto.mimeType || 'application/octet-stream';
 
-    // Required S3 File Pair: <tenant-id>/<stem>.<ext> and <tenant-id>/<stem>.metadata.json
-    const s3Key = `${tenantId}/${dto.fileName}`;
-    const metadataS3Key = `${tenantId}/${stem}.metadata.json`;
+    // Resolve semantic version to avoid collision
+    const resolvedVersion = await this.resolveNextVersion(
+      tenantId,
+      stem,
+      extension,
+      dto.version,
+    );
+
+    // Format-inclusive, semantic-versioned S3 keys
+    const { storageStem, s3Key, metadataS3Key, storageFileName } =
+      this.buildStorageKeys(tenantId, stem, extension, resolvedVersion);
 
     const metadata: IngestionMetadataV1 = {
       schema_version: '1.0',
       tenant_id: tenantId,
       document: {
-        document_id: stem,
+        document_id: storageStem,
         name: dto.name || stem,
-        version: dto.version || '1.0',
+        version: resolvedVersion,
         categories: dto.categories || [],
       },
       access: {
@@ -82,7 +194,7 @@ export class DocumentsService {
 
     const presigned = await this.storage.getUploadPresignedUrl(
       tenantId,
-      dto.fileName,
+      storageFileName,
       contentType,
     );
 
@@ -91,7 +203,9 @@ export class DocumentsService {
       tenantId,
       fileName: dto.fileName,
       stem,
+      storageStem,
       extension,
+      version: resolvedVersion,
       mimeType: contentType,
       fileSize: dto.fileSize || 0,
       s3Key,
@@ -138,9 +252,8 @@ export class DocumentsService {
       );
     }
 
-    // Write accompanying metadata JSON file using the same filename stem
-    await this.storage.writeMetadataJson(doc.metadataS3Key, doc.metadata);
-
+    // Verification passed - stage in UPLOADED status without writing metadata JSON yet
+    // Metadata JSON is only written to S3 upon explicit approval (POST /documents/:id/approve)
     const updated = await this.repository.update(tenantId, documentId, {
       status: DocumentUploadStatus.UPLOADED,
       fileSize: verification.size ?? doc.fileSize,
@@ -149,7 +262,95 @@ export class DocumentsService {
     });
 
     this.logger.log(
-      `Document ${doc.fileName} (id: ${documentId}) successfully completed and paired with ${doc.metadataS3Key}`,
+      `Document ${doc.fileName} (id: ${documentId}) upload verified and staged in UPLOADED status awaiting approval`,
+    );
+
+    return this.mapToResponseDto(updated!);
+  }
+
+  async approveDocument(
+    tenantId: string,
+    documentId: string,
+    userId: string,
+    userRoles: string[] = [],
+    dto?: ApproveDocumentDto,
+  ): Promise<DocumentResponseDto> {
+    const doc = await this.repository.findById(tenantId, documentId);
+    if (!doc) {
+      throw new NotFoundException(`Document ${documentId} not found`);
+    }
+
+    if (
+      doc.status === DocumentUploadStatus.APPROVED ||
+      doc.status === DocumentUploadStatus.PUBLISHED
+    ) {
+      throw new BadRequestException(
+        `Document ${documentId} is already approved`,
+      );
+    }
+
+    if (
+      doc.status !== DocumentUploadStatus.UPLOADED &&
+      doc.status !== DocumentUploadStatus.REJECTED
+    ) {
+      throw new BadRequestException(
+        `Cannot approve document in "${doc.status}" state. Only UPLOADED or REJECTED documents can be approved.`,
+      );
+    }
+
+    // Dual-control enforcement: Maker cannot approve their own uploaded document unless user has admin role
+    const isAdmin = userRoles.some((r) => r.toLowerCase() === 'admin');
+    if (!isAdmin && doc.uploadedBy === userId) {
+      throw new ForbiddenException(
+        'Maker cannot approve their own uploaded document (dual-control violation)',
+      );
+    }
+
+    // Write accompanying metadata JSON file to S3, triggering EventBridge -> SQS -> RAG ingestion
+    await this.storage.writeMetadataJson(doc.metadataS3Key, doc.metadata);
+
+    const updated = await this.repository.update(tenantId, documentId, {
+      status: DocumentUploadStatus.APPROVED,
+      approvedBy: userId,
+      approvedAt: new Date().toISOString(),
+      approvalComment: dto?.comment,
+      rejectedBy: undefined,
+      rejectedAt: undefined,
+      rejectionReason: undefined,
+    });
+
+    this.logger.log(
+      `Document ${doc.fileName} (id: ${documentId}) approved by ${userId} and metadata written to S3 at ${doc.metadataS3Key}`,
+    );
+
+    return this.mapToResponseDto(updated!);
+  }
+
+  async rejectDocument(
+    tenantId: string,
+    documentId: string,
+    userId: string,
+    userRoles: string[] = [],
+    dto: RejectDocumentDto,
+  ): Promise<DocumentResponseDto> {
+    const doc = await this.repository.findById(tenantId, documentId);
+    if (!doc) {
+      throw new NotFoundException(`Document ${documentId} not found`);
+    }
+
+    if (!dto?.reason) {
+      throw new BadRequestException('Rejection reason is mandatory');
+    }
+
+    const updated = await this.repository.update(tenantId, documentId, {
+      status: DocumentUploadStatus.REJECTED,
+      rejectedBy: userId,
+      rejectedAt: new Date().toISOString(),
+      rejectionReason: dto.reason,
+    });
+
+    this.logger.log(
+      `Document ${doc.fileName} (id: ${documentId}) rejected by ${userId}: ${dto.reason}`,
     );
 
     return this.mapToResponseDto(updated!);
@@ -170,16 +371,29 @@ export class DocumentsService {
     const documentId = crypto.randomUUID();
     const contentType = file.mimetype || 'application/octet-stream';
 
-    const s3Key = `${tenantId}/${fileName}`;
-    const metadataS3Key = `${tenantId}/${stem}.metadata.json`;
+    // Resolve semantic version to avoid collision
+    const resolvedVersion = await this.resolveNextVersion(
+      tenantId,
+      stem,
+      extension,
+      dto.version,
+    );
+
+    // Format-inclusive, semantic-versioned S3 keys
+    const { storageStem, s3Key, metadataS3Key } = this.buildStorageKeys(
+      tenantId,
+      stem,
+      extension,
+      resolvedVersion,
+    );
 
     const metadata: IngestionMetadataV1 = {
       schema_version: '1.0',
       tenant_id: tenantId,
       document: {
-        document_id: stem,
+        document_id: storageStem,
         name: dto.name || stem,
-        version: dto.version || '1.0',
+        version: resolvedVersion,
         categories: dto.categories || [],
       },
       access: {
@@ -199,15 +413,15 @@ export class DocumentsService {
       contentType,
     );
 
-    // 2. Upload accompanying authorization metadata file
-    await this.storage.writeMetadataJson(metadataS3Key, metadata);
-
+    // Note: Do NOT write metadata JSON here. It is staged in UPLOADED status until approved.
     const docEntity: DocumentEntity = {
       id: documentId,
       tenantId,
       fileName,
       stem,
+      storageStem,
       extension,
+      version: resolvedVersion,
       mimeType: contentType,
       fileSize: directResult.size,
       s3Key,
@@ -251,16 +465,24 @@ export class DocumentsService {
       },
     };
 
-    // Update metadata JSON on S3 directly (without touching the PDF)
-    await this.storage.writeMetadataJson(doc.metadataS3Key, updatedMetadata);
+    // Only rewrite metadata JSON on S3 directly if the document is already approved
+    if (
+      doc.status === DocumentUploadStatus.APPROVED ||
+      doc.status === DocumentUploadStatus.PUBLISHED
+    ) {
+      await this.storage.writeMetadataJson(doc.metadataS3Key, updatedMetadata);
+      this.logger.log(
+        `Updated authorization metadata for approved document ${documentId} on S3 at ${doc.metadataS3Key}`,
+      );
+    } else {
+      this.logger.log(
+        `Updated authorization metadata for staged document ${documentId} in repository (not written to S3 until approved)`,
+      );
+    }
 
     const updatedDoc = await this.repository.update(tenantId, documentId, {
       metadata: updatedMetadata,
     });
-
-    this.logger.log(
-      `Updated authorization metadata for document ${documentId} on S3 at ${doc.metadataS3Key}`,
-    );
 
     return this.mapToResponseDto(updatedDoc!);
   }
@@ -305,13 +527,20 @@ export class DocumentsService {
     if (!doc) {
       throw new NotFoundException(`Document ${documentId} not found`);
     }
-    if (doc.status !== DocumentUploadStatus.UPLOADED) {
+    if (
+      doc.status !== DocumentUploadStatus.UPLOADED &&
+      doc.status !== DocumentUploadStatus.APPROVED &&
+      doc.status !== DocumentUploadStatus.PUBLISHED
+    ) {
       throw new BadRequestException(
         `Cannot download document in "${doc.status}" state`,
       );
     }
 
-    const downloadUrl = await this.storage.getDownloadPresignedUrl(doc.s3Key);
+    const downloadUrl = await this.storage.getDownloadPresignedUrl(
+      doc.s3Key,
+      doc.fileName,
+    );
     return {
       downloadUrl,
       expiresIn: 300,
@@ -353,6 +582,12 @@ export class DocumentsService {
       metadata: entity.metadata,
       uploadedBy: entity.uploadedBy,
       uploadedAt: entity.uploadedAt,
+      approvedBy: entity.approvedBy,
+      approvedAt: entity.approvedAt,
+      approvalComment: entity.approvalComment,
+      rejectedBy: entity.rejectedBy,
+      rejectedAt: entity.rejectedAt,
+      rejectionReason: entity.rejectionReason,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       errorMessage: entity.errorMessage,

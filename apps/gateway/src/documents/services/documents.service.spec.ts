@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 import {
   DOCUMENT_REPOSITORY_TOKEN,
@@ -80,21 +84,83 @@ describe('DocumentsService', () => {
       expect(res.fileName).toBe('performance-policy.pdf');
       expect(res.stem).toBe('performance-policy');
       expect(res.uploadUrl).toBe('https://s3.test/upload');
-      expect(res.s3Key).toBe('tenant-001/performance-policy.pdf');
-      expect(res.metadataS3Key).toBe('tenant-001/performance-policy.metadata.json');
+      expect(res.s3Key).toBe('tenant-001/performance-policy_pdf_v1.0.pdf');
+      expect(res.metadataS3Key).toBe(
+        'tenant-001/performance-policy_pdf_v1.0.metadata.json',
+      );
       expect(res.status).toBe(DocumentUploadStatus.PENDING_UPLOAD);
 
       const saved = await repository.findById('tenant-001', res.documentId);
       expect(saved).toBeDefined();
       expect(saved?.metadata.schema_version).toBe('1.0');
-      expect(saved?.metadata.document.document_id).toBe('performance-policy');
+      expect(saved?.metadata.document.document_id).toBe(
+        'performance-policy_pdf_v1.0',
+      );
+      expect(saved?.metadata.document.version).toBe('1.0');
       expect(saved?.metadata.access.departments).toEqual(['technology']);
       expect(saved?.metadata.access.excluded_users).toEqual(['user-alex-rivera']);
+    });
+
+    it('should auto-increment semantic version on subsequent upload of same format', async () => {
+      const first = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'performance-policy.pdf',
+      });
+      expect(first.s3Key).toBe('tenant-001/performance-policy_pdf_v1.0.pdf');
+      expect(first.metadataS3Key).toBe(
+        'tenant-001/performance-policy_pdf_v1.0.metadata.json',
+      );
+
+      const second = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'performance-policy.pdf',
+      });
+      expect(second.s3Key).toBe('tenant-001/performance-policy_pdf_v1.1.pdf');
+      expect(second.metadataS3Key).toBe(
+        'tenant-001/performance-policy_pdf_v1.1.metadata.json',
+      );
+    });
+
+    it('should isolate metadata and document keys for same name with different format', async () => {
+      const docx = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'annual-report.docx',
+      });
+      const pdf = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'annual-report.pdf',
+      });
+
+      expect(docx.s3Key).toBe('tenant-001/annual-report_docx_v1.0.docx');
+      expect(docx.metadataS3Key).toBe(
+        'tenant-001/annual-report_docx_v1.0.metadata.json',
+      );
+
+      expect(pdf.s3Key).toBe('tenant-001/annual-report_pdf_v1.0.pdf');
+      expect(pdf.metadataS3Key).toBe(
+        'tenant-001/annual-report_pdf_v1.0.metadata.json',
+      );
+
+      // Metadata keys must be distinct to prevent cross-format collision
+      expect(docx.metadataS3Key).not.toBe(pdf.metadataS3Key);
+    });
+
+    it('should honor explicitly requested higher semantic version', async () => {
+      await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'handbook.pdf',
+        version: '1.0',
+      });
+
+      const bumped = await service.initiateUpload('tenant-001', 'user-1', {
+        fileName: 'handbook.pdf',
+        version: '2.0',
+      });
+
+      expect(bumped.s3Key).toBe('tenant-001/handbook_pdf_v2.0.pdf');
+      expect(bumped.metadataS3Key).toBe(
+        'tenant-001/handbook_pdf_v2.0.metadata.json',
+      );
     });
   });
 
   describe('completeUpload', () => {
-    it('should verify S3 file, write metadata JSON pair, and mark as UPLOADED', async () => {
+    it('should verify S3 file and mark as UPLOADED without writing metadata JSON yet', async () => {
       const initiated = await service.initiateUpload('tenant-001', 'user-1', {
         fileName: 'performance-policy.pdf',
       });
@@ -108,15 +174,10 @@ describe('DocumentsService', () => {
       expect(completed.fileSize).toBe(2048);
       expect(completed.uploadedAt).toBeDefined();
       expect(storage.verifyObjectExists).toHaveBeenCalledWith(
-        'tenant-001/performance-policy.pdf',
+        'tenant-001/performance-policy_pdf_v1.0.pdf',
       );
-      expect(storage.writeMetadataJson).toHaveBeenCalledWith(
-        'tenant-001/performance-policy.metadata.json',
-        expect.objectContaining({
-          schema_version: '1.0',
-          tenant_id: 'tenant-001',
-        }),
-      );
+      // Crucial: metadata JSON should NOT be written on upload completion
+      expect(storage.writeMetadataJson).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if document does not exist', async () => {
@@ -143,7 +204,7 @@ describe('DocumentsService', () => {
   });
 
   describe('uploadDirect', () => {
-    it('should directly upload file and metadata JSON to S3', async () => {
+    it('should directly upload file buffer to S3 without writing metadata JSON yet', async () => {
       const mockFile = {
         originalname: 'direct-upload.pdf',
         mimetype: 'application/pdf',
@@ -159,14 +220,12 @@ describe('DocumentsService', () => {
       expect(res.status).toBe(DocumentUploadStatus.UPLOADED);
       expect(res.stem).toBe('direct-upload');
       expect(storage.uploadDirect).toHaveBeenCalledWith(
-        'tenant-001/direct-upload.pdf',
+        'tenant-001/direct-upload_pdf_v1.0.pdf',
         mockFile.buffer,
         'application/pdf',
       );
-      expect(storage.writeMetadataJson).toHaveBeenCalledWith(
-        'tenant-001/direct-upload.metadata.json',
-        expect.any(Object),
-      );
+      // Crucial: metadata JSON should NOT be written on direct upload
+      expect(storage.writeMetadataJson).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if file is undefined', async () => {
@@ -181,12 +240,160 @@ describe('DocumentsService', () => {
     });
   });
 
+  describe('approveDocument', () => {
+    it('should approve an UPLOADED document, write metadata JSON to S3, and mark as APPROVED', async () => {
+      const initiated = await service.initiateUpload('tenant-001', 'maker-user', {
+        fileName: 'policy.pdf',
+        departments: ['engineering'],
+      });
+      await service.completeUpload('tenant-001', initiated.documentId);
+
+      const approved = await service.approveDocument(
+        'tenant-001',
+        initiated.documentId,
+        'checker-user',
+        ['checker'],
+        { comment: 'Looks good for ingestion' },
+      );
+
+      expect(approved.status).toBe(DocumentUploadStatus.APPROVED);
+      expect(approved.approvedBy).toBe('checker-user');
+      expect(approved.approvedAt).toBeDefined();
+      expect(approved.approvalComment).toBe('Looks good for ingestion');
+      expect(storage.writeMetadataJson).toHaveBeenCalledWith(
+        'tenant-001/policy_pdf_v1.0.metadata.json',
+        expect.objectContaining({
+          schema_version: '1.0',
+          tenant_id: 'tenant-001',
+        }),
+      );
+    });
+
+    it('should prevent maker from self-approving their own uploaded document (dual-control)', async () => {
+      const initiated = await service.initiateUpload('tenant-001', 'same-user', {
+        fileName: 'self-doc.pdf',
+      });
+      await service.completeUpload('tenant-001', initiated.documentId);
+
+      await expect(
+        service.approveDocument(
+          'tenant-001',
+          initiated.documentId,
+          'same-user',
+          ['maker', 'checker'],
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should allow admin to approve even if they uploaded the document', async () => {
+      const initiated = await service.initiateUpload('tenant-001', 'admin-user', {
+        fileName: 'admin-doc.pdf',
+      });
+      await service.completeUpload('tenant-001', initiated.documentId);
+
+      const approved = await service.approveDocument(
+        'tenant-001',
+        initiated.documentId,
+        'admin-user',
+        ['admin'],
+      );
+      expect(approved.status).toBe(DocumentUploadStatus.APPROVED);
+      expect(approved.approvedBy).toBe('admin-user');
+    });
+
+    it('should throw BadRequestException if document is already approved', async () => {
+      const initiated = await service.initiateUpload('tenant-001', 'maker-1', {
+        fileName: 'already.pdf',
+      });
+      await service.completeUpload('tenant-001', initiated.documentId);
+      await service.approveDocument(
+        'tenant-001',
+        initiated.documentId,
+        'checker-1',
+        ['checker'],
+      );
+
+      await expect(
+        service.approveDocument(
+          'tenant-001',
+          initiated.documentId,
+          'checker-2',
+          ['checker'],
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if document does not exist', async () => {
+      await expect(
+        service.approveDocument(
+          'tenant-001',
+          'non-existent',
+          'checker-1',
+          ['checker'],
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('rejectDocument', () => {
+    it('should reject document with mandatory reason without writing metadata to S3', async () => {
+      const initiated = await service.initiateUpload('tenant-001', 'maker-1', {
+        fileName: 'reject-me.pdf',
+      });
+      await service.completeUpload('tenant-001', initiated.documentId);
+
+      const rejected = await service.rejectDocument(
+        'tenant-001',
+        initiated.documentId,
+        'checker-1',
+        ['checker'],
+        { reason: 'Classification missing' },
+      );
+
+      expect(rejected.status).toBe(DocumentUploadStatus.REJECTED);
+      expect(rejected.rejectedBy).toBe('checker-1');
+      expect(rejected.rejectedAt).toBeDefined();
+      expect(rejected.rejectionReason).toBe('Classification missing');
+      expect(storage.writeMetadataJson).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException if rejection reason is empty', async () => {
+      const initiated = await service.initiateUpload('tenant-001', 'maker-1', {
+        fileName: 'reject-empty.pdf',
+      });
+      await service.completeUpload('tenant-001', initiated.documentId);
+
+      await expect(
+        service.rejectDocument(
+          'tenant-001',
+          initiated.documentId,
+          'checker-1',
+          ['checker'],
+          { reason: '' },
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if document does not exist', async () => {
+      await expect(
+        service.rejectDocument(
+          'tenant-001',
+          'unknown',
+          'checker-1',
+          ['checker'],
+          { reason: 'test' },
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('updateAccess', () => {
-    it('should update authorization metadata without touching source file', async () => {
+    it('should update authorization metadata in repository without writing to S3 if not yet approved', async () => {
       const initiated = await service.initiateUpload('tenant-001', 'user-1', {
         fileName: 'policy.pdf',
         departments: ['engineering'],
       });
+      await service.completeUpload('tenant-001', initiated.documentId);
 
       const updated = await service.updateAccess(
         'tenant-001',
@@ -206,14 +413,39 @@ describe('DocumentsService', () => {
       expect(updated.metadata.access.allowed_users).toEqual(['user-bob']);
       expect(updated.metadata.access.excluded_users).toEqual(['user-charlie']);
       expect(updated.metadata.document.categories).toEqual(['governance']);
+      // Staged document should NOT write to S3
+      expect(storage.writeMetadataJson).not.toHaveBeenCalled();
+    });
+
+    it('should update authorization metadata and rewrite to S3 if document is already APPROVED', async () => {
+      const initiated = await service.initiateUpload('tenant-001', 'maker-1', {
+        fileName: 'approved-policy.pdf',
+      });
+      await service.completeUpload('tenant-001', initiated.documentId);
+      await service.approveDocument(
+        'tenant-001',
+        initiated.documentId,
+        'checker-1',
+        ['checker'],
+      );
+
+      storage.writeMetadataJson.mockClear();
+
+      const updated = await service.updateAccess(
+        'tenant-001',
+        initiated.documentId,
+        {
+          departments: ['finance'],
+        },
+      );
+
+      expect(updated.metadata.access.departments).toEqual(['finance']);
       expect(storage.writeMetadataJson).toHaveBeenCalledWith(
-        'tenant-001/policy.metadata.json',
+        'tenant-001/approved-policy_pdf_v1.0.metadata.json',
         expect.objectContaining({
-          access: {
-            departments: ['engineering', 'compliance'],
-            allowed_users: ['user-bob'],
-            excluded_users: ['user-charlie'],
-          },
+          access: expect.objectContaining({
+            departments: ['finance'],
+          }),
         }),
       );
     });
@@ -285,7 +517,8 @@ describe('DocumentsService', () => {
       );
       expect(download.downloadUrl).toBe('https://s3.test/download');
       expect(storage.getDownloadPresignedUrl).toHaveBeenCalledWith(
-        'tenant-001/downloadable.pdf',
+        'tenant-001/downloadable_pdf_v1.0.pdf',
+        'downloadable.pdf',
       );
     });
 
@@ -306,8 +539,8 @@ describe('DocumentsService', () => {
       );
       expect(deleteRes.success).toBe(true);
       expect(storage.deleteFilePair).toHaveBeenCalledWith(
-        'tenant-001/to-delete.pdf',
-        'tenant-001/to-delete.metadata.json',
+        'tenant-001/to-delete_pdf_v1.0.pdf',
+        'tenant-001/to-delete_pdf_v1.0.metadata.json',
       );
 
       await expect(

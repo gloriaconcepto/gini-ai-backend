@@ -97,6 +97,28 @@ export class DocumentResponseDto {
   @ApiPropertyOptional({ example: '2026-10-13T16:00:00Z' })
   uploadedAt?: string;
 
+  @ApiPropertyOptional({ example: 'user-checker-456' })
+  approvedBy?: string;
+
+  @ApiPropertyOptional({ example: '2026-10-13T16:30:00Z' })
+  approvedAt?: string;
+
+  @ApiPropertyOptional({
+    example: 'Reviewed and compliant with corporate RAG governance policies.',
+  })
+  approvalComment?: string;
+
+  @ApiPropertyOptional({ example: 'user-checker-456' })
+  rejectedBy?: string;
+
+  @ApiPropertyOptional({ example: '2026-10-13T16:30:00Z' })
+  rejectedAt?: string;
+
+  @ApiPropertyOptional({
+    example: 'Classification discrepancy: missing required department restrictions.',
+  })
+  rejectionReason?: string;
+
   @ApiProperty({ example: '2026-10-13T15:55:00Z' })
   createdAt!: string;
 
