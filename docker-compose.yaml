@@ -29,7 +29,7 @@ services:
       KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:-2AgTtNcnIpuojPM8OKzdH4pQ5kAk9PA3}
     volumes:
       - ./infra/keycloak/master-realm.json:/opt/keycloak/data/import/master-realm.json:ro
-      - ./dist_keycloak/keycloak-theme-for-kc-22-to-25.jar:/opt/keycloak/providers/gini-theme.jar:ro
+      # - ./dist_keycloak/keycloak-theme-for-kc-22-to-25.jar:/opt/keycloak/providers/gini-theme.jar:ro
     command: start-dev --import-realm
     ports:
       - '8080:8080'
